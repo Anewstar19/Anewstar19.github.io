@@ -771,4 +771,61 @@ addEventListener('resize',()=>{if(!panel.classList.contains('music-mini'))size(p
 #music button{transition:background .15s}#music #logoutmusic{opacity:.7}
 @media(prefers-reduced-motion:reduce){#music *{transition:none!important}}
 </style>
+
+<style id="music-responsive-layout">
+#music{--music-font:14px;--music-cover:44px;--music-gap:10px;font-size:var(--music-font);container-type:inline-size}
+#music #bodymusic,#music #authenticated,#music #musicdock,#music #playing,#music #playing>div,#music #searchform,#music #resultlist .meta{min-width:0;max-width:100%;box-sizing:border-box}
+#music #resultlist .result{gap:var(--music-gap);min-width:0;align-items:center}
+#music #resultlist .meta{flex:1 1 0%;overflow:visible}
+#music #resultlist .meta span{font-size:var(--music-font);white-space:normal;overflow-wrap:anywhere;word-break:normal;overflow:visible;text-overflow:clip;line-height:1.35}
+#music #resultlist .meta small{font-size:calc(var(--music-font) - 2px);white-space:normal;overflow-wrap:anywhere;overflow:visible;line-height:1.4;margin-top:3px}
+#music #resultlist img{width:var(--music-cover);height:var(--music-cover)}
+#music #resultlist .result-duration{font-size:calc(var(--music-font) - 2px);flex-shrink:0}
+#music #querymusic{font-size:var(--music-font);min-width:0;box-sizing:border-box}
+#music #searchform select,#music #searchbutton{font-size:calc(var(--music-font) - 1px)}
+#music #titlemusic{font-size:var(--music-font);white-space:normal;overflow-wrap:anywhere;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+#music #artistmusic{font-size:calc(var(--music-font) - 2px);white-space:normal;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+#music #playing{flex:1 1 0%;gap:var(--music-gap)}
+#music #coverdirect,#music #cover{width:var(--music-cover);height:var(--music-cover);flex-shrink:0}
+#music #musicdock{gap:var(--music-gap)}
+#music.music-narrow #musicdock{flex-wrap:wrap;justify-content:center;gap:4px}
+#music.music-narrow #playing{flex-basis:100%}
+#music.music-narrow #controlsbar{justify-content:center}
+#music.music-narrow #resultlist .result-duration{display:none}
+#music.music-narrow #resultlist .result{padding:6px}
+#music.music-narrow #resultlist button{width:28px;height:28px}
+#music.music-narrow .music-heading{font-size:10px;letter-spacing:.035em;gap:5px}
+#music.music-short{gap:5px;padding-top:10px;padding-bottom:10px}
+#music.music-short #volumecontainer,#music.music-short #logoutmusic{display:none}
+#music.music-short #querymusic{padding:8px 12px}
+#music.music-short #searchform{gap:4px}
+#music.music-short #message{max-height:15px;font-size:10px}
+#music.music-short #seek{display:none}
+#music.music-short #musicdock{padding-top:5px;flex-wrap:nowrap;gap:5px}
+#music.music-short #playing{flex-basis:0%;gap:6px}
+#music.music-short #artistmusic{-webkit-line-clamp:1}
+#music.music-short #titlemusic{-webkit-line-clamp:1}
+#music.music-short #controlsbar{gap:0}
+#music.music-short #controlsbar button{width:25px;height:25px;font-size:15px}
+#music.music-short #controlsbar #playmusic,#music.music-short #controlsbar #pausemusic{width:29px!important;height:29px!important}
+#music.music-mini #musicdock{flex-wrap:nowrap;gap:5px}
+#music.music-mini #playing{flex-basis:0%}
+#music #resultlist{overscroll-behavior:contain}
+</style>
+<script>
+(()=>{
+const panel=document.getElementById('music');
+function adaptMusic(){
+const w=panel.clientWidth,h=panel.clientHeight;
+const font=Math.max(12,Math.min(16,12+(w-280)/110));
+panel.style.setProperty('--music-font',font.toFixed(2)+'px');
+panel.style.setProperty('--music-cover',Math.max(32,Math.min(52,32+(w-280)/10))+'px');
+panel.style.setProperty('--music-gap',Math.max(6,Math.min(12,6+(w-280)/50))+'px');
+panel.classList.toggle('music-narrow',w<400);
+panel.classList.toggle('music-short',h<390);
+}
+if('ResizeObserver' in window){const observer=new ResizeObserver(adaptMusic);observer.observe(panel)}else{addEventListener('resize',adaptMusic);setInterval(adaptMusic,300)}
+adaptMusic();
+})();
+</script>
 </body></html>
