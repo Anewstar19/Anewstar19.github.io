@@ -645,8 +645,7 @@ const text=await r.text();if(!text.trim())throw Error('Spotify a trimis un răsp
 let data;try{data=JSON.parse(text)}catch(e){throw Error('Spotify a trimis un răspuns neașteptat pentru căutare, nu date JSON. Reîncearcă mai târziu.')}
 if(!data||typeof data!=='object')throw Error('Spotify a trimis date într-un format neașteptat. Reîncearcă.');return data}
 E('loginmusic').onclick=async()=>{try{if(location.origin+'/'!==R)throw Error('Deschide '+R);const v=random(),st=random();sessionStorage.setItem('mb_v',v);sessionStorage.setItem('mb_s',st);const h=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(v));const ch=btoa(String.fromCharCode(...new Uint8Array(h))).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');location.assign('https://accounts.spotify.com/authorize?'+new URLSearchParams({client_id:C,response_type:'code',redirect_uri:R,scope:'streaming user-read-email user-read-private user-read-playback-state user-read-currently-playing user-modify-playback-state',state:st,code_challenge_method:'S256',code_challenge:ch}))}catch(e){M(e.message)}};
-E('expandmusic').onclick=()=>{const expanded=E('music').classList.toggle('music-expanded');E('expandmusic').setAttribute('aria-label',expanded?'Micșorează playerul':'Extinde playerul');E('expandmusic').setAttribute('aria-pressed',String(expanded))};E('logoutmusic').onclick=()=>{if(player)player.disconnect();player=null;device=null;initPromise=null;auth=null;sessionStorage.removeItem(K);E('playing').hidden=true;E('resultlist').replaceChildren();M('Deconectat.');ui()};E('minimize').onclick=()=>{E('bodymusic').hidden=!E('bodymusic').hidden;E('minimize').textContent=E('bodymusic').hidden?'+':'−'};
-let sdkResolve;const sdk=new Promise(r=>sdkResolve=r);window.onSpotifyWebPlaybackSDKReady=()=>sdkResolve();const script=document.createElement('script');script.src='https://sdk.scdn.co/spotify-player.js';script.onerror=()=>M('Playerul Spotify nu s-a încărcat. Verifică browserul.');document.head.appendChild(script);
+E('logoutmusic').onclick=()=>{if(player)player.disconnect();player=null;device=null;initPromise=null;auth=null;sessionStorage.removeItem(K);E('playing').hidden=true;E('resultlist').replaceChildren();M('Deconectat.');ui()};let sdkResolve;const sdk=new Promise(r=>sdkResolve=r);window.onSpotifyWebPlaybackSDKReady=()=>sdkResolve();const script=document.createElement('script');script.src='https://sdk.scdn.co/spotify-player.js';script.onerror=()=>M('Playerul Spotify nu s-a încărcat. Verifică browserul.');document.head.appendChild(script);
 const fmt=n=>Math.floor((n||0)/60000)+':'+String(Math.floor((n||0)/1000)%60).padStart(2,'0');
 function display(st){state=st;if(!st)return;const t=st.track_window.current_track;E('playing').hidden=false;E('titlemusic').textContent=t.name;E('artistmusic').textContent=(t.artists||[]).map(x=>x.name).join(', ');E('statemusic').textContent=st.paused?'Pe pauză':'În redare · în jurnal';const img=t.album&&t.album.images&&t.album.images[0];E('cover').hidden=!img;if(img)E('cover').src=img.url;E('tracklink').href='https://open.spotify.com/track/'+t.id;E('coverdirect').href=E('tracklink').href;E('playmusic').hidden=!st.paused;E('pausemusic').hidden=st.paused;E('seek').value=st.duration?100*st.position/st.duration:0;E('timeinfo').textContent=fmt(st.position)+' / '+fmt(st.duration)}
 async function setup(){if(device)return;if(initPromise)return initPromise;initPromise=(async()=>{await Promise.race([sdk,new Promise((_,rej)=>setTimeout(()=>rej(Error('Playerul nu s-a încărcat. Reîncarcă pagina.')),18000))]);await access();player=new Spotify.Player({name:'Jurnal de studiu',volume:.5,getOAuthToken:cb=>access().then(cb).catch(e=>M(e.message))});['initialization_error','authentication_error','account_error','playback_error'].forEach(ev=>player.addListener(ev,({message})=>M(message)));player.addListener('autoplay_failed',()=>M('Apasă Play pentru a permite sunetul.'));player.addListener('player_state_changed',display);player.addListener('not_ready',()=>{device=null;initPromise=null;M('Player deconectat. Reîncarcă pagina.');});await new Promise((res,rej)=>{const t=setTimeout(()=>rej(Error('Conectarea playerului a expirat. Reîncarcă pagina.')),20000);player.addListener('ready',({device_id})=>{device=device_id;clearTimeout(t);M('Caută o melodie și apasă ▶ lângă ea.');res()});player.connect().then(ok=>{if(!ok){clearTimeout(t);rej(Error('Browserul nu permite playerul. Verifică redarea conținutului protejat.'))}}).catch(e=>{clearTimeout(t);rej(e)})})})();try{await initPromise}catch(e){initPromise=null;throw e}}
@@ -654,36 +653,92 @@ async function activate(){if(player)await player.activateElement();await setup()
 async function run(fn){if(busy)return;busy=true;try{await fn()}catch(e){M(e.message)}finally{busy=false}}
 E('playmusic').onclick=()=>run(async()=>{await activate();await api('/me/player/play?device_id='+encodeURIComponent(device),'PUT');M('Redare în jurnal.');});
 E('pausemusic').onclick=()=>run(async()=>{await setup();await player.pause()});E('stopmusic').onclick=()=>run(async()=>{await setup();await player.pause();await player.seek(0);M('Oprit, la începutul piesei.');});E('previousmusic').onclick=()=>run(async()=>{await activate();await player.previousTrack()});E('nextmusic').onclick=()=>run(async()=>{await activate();await player.nextTrack()});E('vol').onchange=()=>run(async()=>{await setup();await player.setVolume(Number(E('vol').value)/100)});E('seek').onchange=()=>run(async()=>{if(state){await setup();await player.seek(Math.floor(Number(E('seek').value)*state.duration/100))}});
-let searchBusy=false;
-E('searchform').onsubmit=async e=>{e.preventDefault();if(searchBusy)return;const q=E('querymusic').value.trim();if(!q)return;searchBusy=true;E('searchbutton').disabled=true;M('Caut pe Spotify…');try{const type=E('searchtype').value,d=await api('/search?'+new URLSearchParams({q,type,limit:'10'})),items=((d[type==='track'?'tracks':type==='album'?'albums':'playlists']||{}).items||[]).filter(Boolean);E('resultlist').replaceChildren();queue=type==='track'?items.filter(x=>x.uri&&x.is_playable!==false).map(x=>x.uri):[];if(!items.length)M('Niciun rezultat. Încearcă alt nume.');else M('Alege un rezultat pentru redare în jurnal.');const uris=[...queue];items.forEach(item=>{const row=document.createElement('div');row.className='result';const image=((item.album&&item.album.images)||item.images||[])[0];if(image){const im=document.createElement('img');im.src=image.url;im.alt='Coperta: '+item.name;im.tabIndex=0;im.setAttribute('role','button');im.setAttribute('aria-label','Redă '+item.name);const open=()=>{const button=row.querySelector('button');if(button&&!button.disabled)button.click()};im.onclick=open;im.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open()}};row.append(im)}const meta=document.createElement('div');meta.className='meta';const label=document.createElement('span');label.textContent=item.name;const small=document.createElement('small');small.textContent=(item.artists||[]).map(x=>x.name).join(', ')||(item.owner&&item.owner.display_name)||'';meta.append(label,small);const link=document.createElement('a');link.textContent='Spotify';link.target='_blank';link.rel='noopener noreferrer';link.style.fontSize='11px';if(item.external_urls&&item.external_urls.spotify)link.href=item.external_urls.spotify;meta.append(link);row.append(meta);const b=document.createElement('button');b.type='button';b.textContent='▶';b.setAttribute('aria-label','Redă '+item.name);b.disabled=item.is_playable===false;b.onclick=()=>run(async()=>{await activate();const index=uris.indexOf(item.uri),body=type==='track'?{uris:index>=0?uris:[item.uri],offset:{position:index>=0?index:0}}:{context_uri:item.uri};await api('/me/player/play?device_id='+encodeURIComponent(device),'PUT',body);M('Redare cerută: '+item.name);});row.append(b);E('resultlist').append(row)})}catch(e){M(e.message)}finally{searchBusy=false;E('searchbutton').disabled=false}};
+let searchBusy=false,searchNext=null,searchQuery='',searchType='track',searchOffset=0;
+const more=document.createElement('button');more.id='moremusic';more.className='wide';more.textContent='Încarcă mai multe';more.hidden=true;E('resultlist').after(more);
+async function searchMusic(append=false){
+if(searchBusy)return;const q=append?searchQuery:E('querymusic').value.trim();if(!q)return;
+searchBusy=true;E('searchbutton').disabled=true;more.disabled=true;M('Caut pe Spotify…');
+try{
+const type=append?searchType:E('searchtype').value,offset=append?searchOffset:0;
+const d=await api('/search?'+new URLSearchParams({q,type,limit:'10',offset:String(offset)}));
+const page=d[type==='track'?'tracks':type==='album'?'albums':'playlists']||{},items=(page.items||[]).filter(Boolean);
+if(!append){E('resultlist').replaceChildren();queue=[];E('resultlist').scrollTop=0}
+searchQuery=q;searchType=type;searchOffset=offset+10;searchNext=page.next;
+if(type==='track')queue.push(...items.filter(x=>x.uri&&x.is_playable!==false).map(x=>x.uri));
+items.forEach(item=>{
+const row=document.createElement('div');row.className='result';
+const imdata=((item.album&&item.album.images)||item.images||[])[0];
+if(imdata){const im=document.createElement('img');im.src=imdata.url;im.alt='';im.loading='lazy';row.append(im)}
+const meta=document.createElement('div');meta.className='meta';
+const title=document.createElement('span');title.textContent=item.name;
+const artist=document.createElement('small');artist.textContent=(item.artists||[]).map(x=>x.name).join(', ')||(item.owner&&item.owner.display_name)||'';
+meta.append(title,artist);row.append(meta);
+if(item.duration_ms){const duration=document.createElement('small');duration.className='result-duration';duration.textContent=fmt(item.duration_ms);row.append(duration)}
+const button=document.createElement('button');button.type='button';button.textContent='▶';button.setAttribute('aria-label','Redă '+item.name);button.disabled=item.is_playable===false;
+button.onclick=()=>run(async()=>{await activate();const uris=[...queue],index=uris.indexOf(item.uri);const body=type==='track'?{uris:index>=0?uris:[item.uri],offset:{position:Math.max(index,0)}}:{context_uri:item.uri};await api('/me/player/play?device_id='+encodeURIComponent(device),'PUT',body);M('Redare cerută: '+item.name)});
+row.append(button);E('resultlist').append(row)
+});
+more.hidden=!searchNext;M(E('resultlist').children.length+' rezultate afișate'+(searchNext?' · Încarcă mai multe pentru a continua.':'.'));
+}catch(e){M(e.message)}finally{searchBusy=false;E('searchbutton').disabled=false;more.disabled=false}
+}
+E('searchform').onsubmit=e=>{e.preventDefault();searchMusic(false)};more.onclick=()=>searchMusic(true);
 (async()=>{ui();const q=new URLSearchParams(location.search);if(q.has('code')||q.has('error')){try{const st=sessionStorage.getItem('mb_s'),v=sessionStorage.getItem('mb_v');if(!st||q.get('state')!==st||!v)throw Error('Verificarea conectării a eșuat. Încearcă din nou.');if(q.has('error'))throw Error('Autorizare anulată.');await token({grant_type:'authorization_code',code:q.get('code'),redirect_uri:R,code_verifier:v})}catch(e){M(e.message)}finally{sessionStorage.removeItem('mb_s');sessionStorage.removeItem('mb_v');history.replaceState({},'',location.pathname)}}if(auth)setup().catch(e=>M(e.message));setInterval(()=>{if(player&&device&&!document.hidden)player.getCurrentState().then(display).catch(()=>{})},1000)})();
 })();</script>
-<style id="large-music-layout">
-#music{width:410px;max-width:calc(100vw - 24px);max-height:90dvh;padding:22px;background:linear-gradient(155deg,#284438 0%,#181b19 55%,#121212 100%);border:1px solid #ffffff25;border-radius:22px;box-shadow:0 20px 65px #0006;text-shadow:none;box-sizing:border-box;scrollbar-width:thin}
-#music .music-heading{display:flex;align-items:center;gap:10px;font-size:12px;letter-spacing:.06em;color:#ddd}
+
+
+<style id="music-search-layout">
+#music{width:500px;height:610px;min-width:280px;min-height:190px;max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px);padding:15px;right:12px;bottom:12px;box-sizing:border-box;overflow:hidden;display:flex;flex-direction:column;gap:10px;background:linear-gradient(145deg,#23362c,#121212 55%);border:1px solid #ffffff30;box-shadow:0 18px 65px #0007;text-shadow:none;border-radius:16px;color:#fff}
+#music [hidden]{display:none!important}#music .music-heading{display:flex;align-items:center;gap:8px;flex-shrink:0;font-size:12px;letter-spacing:.04em;padding-left:12px;color:#c2d3c7}
 #music #expandmusic{margin-left:auto;width:28px;height:28px;font-size:18px}
-#playing:not([hidden]){display:flex;flex-direction:column;align-items:stretch;gap:20px;margin:24px 0 14px}
-#playing[hidden],#music [hidden]{display:none!important}
-#coverdirect{display:block;width:100%;border-radius:12px;overflow:hidden;box-shadow:0 14px 35px #0006;line-height:0}
-#music #cover{display:block;width:100%;height:auto;aspect-ratio:1;object-fit:contain;cursor:pointer;background:#202522}
-#titlemusic{font-size:26px;line-height:1.2;font-weight:750;letter-spacing:-.025em;display:block}
-#tracklink{text-decoration:none}#tracklink:hover{text-decoration:underline}
-#artistmusic{color:#c2c8c3;font-size:16px;margin-top:7px}#statemusic{display:block;color:#8eac98;margin-top:7px;font-size:12px}
-#controlsbar{align-items:center;gap:16px;margin:22px 0 16px}
-#music #playmusic,#music #pausemusic{width:64px;height:64px;background:#1ed760;color:#071309;border:0;font-size:26px}
-#music #previousmusic,#music #nextmusic{border:0;font-size:25px}#music #stopmusic{display:none}
-#seek{margin:0;cursor:pointer}#timeinfo{display:block;text-align:right;color:#b6bcb7;margin:5px 0 15px}
-#music #searchform{border-top:1px solid #ffffff20;margin-top:20px;padding-top:10px}
-#music input[type=text],#music select{background:#ffffff0d;border-color:#ffffff30}
-#music button:focus-visible,#music a:focus-visible{outline:2px solid #1ed760;outline-offset:4px}
-#resultlist img{width:56px;height:56px;border-radius:5px;cursor:pointer}
-#resultlist .result{padding:10px 0}#resultlist{max-height:260px}
-#music #logoutmusic{margin-top:16px;color:#bbb;border-radius:8px;border-color:#ffffff25}
-#message{color:#b6bcb7}#coverzoom{display:none!important}
-#music.music-expanded{inset:18px;width:auto;max-width:1100px;margin:auto;max-height:calc(100dvh - 36px)}
-#music.music-expanded #bodymusic{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 36px;align-items:start}
-#music.music-expanded #playing{grid-column:1;grid-row:1 / span 3}#music.music-expanded #authenticated{grid-column:2;grid-row:1 / span 2;padding-top:25px}
-#music.music-expanded #loginmusic,#music.music-expanded #message{grid-column:2;margin-top:25px}
-@media(max-width:680px){#music{right:12px;bottom:12px;padding:18px;max-height:88dvh}#music.music-expanded{inset:8px;max-height:calc(100dvh - 16px)}#music.music-expanded #bodymusic{display:block}#titlemusic{font-size:24px}}
+#bodymusic{display:flex;flex-direction:column;min-height:0;flex:1;gap:8px}
+#authenticated{display:flex;flex-direction:column;flex:1;min-height:0;gap:8px}
+#music #searchform{display:flex;flex-wrap:wrap;gap:7px;flex-shrink:0}
+#music #querymusic{width:100%;margin:0;border-radius:24px;padding:12px 15px;background:#ffffff12;border:1px solid #ffffff25;font-size:14px}
+#music select{flex:1;min-width:90px;background:#232b25}#music select option{color:white;background:#232b25}
+#music .wide{border-radius:8px;border-color:#ffffff25;padding:7px 12px}
+#music #resultlist{flex:1;min-height:0;max-height:none;overflow-y:auto;margin:0;scrollbar-width:thin;background:#00000012;border-radius:8px}
+#resultlist .result{display:flex;gap:10px;align-items:center;padding:8px;border:0;border-radius:7px;min-height:62px}
+#resultlist .result:hover{background:#ffffff10}#resultlist img{width:44px;height:44px;object-fit:cover;border-radius:4px;cursor:default;flex-shrink:0}
+#resultlist .meta{min-width:0;flex:1}#resultlist .meta span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
+#resultlist small{font-size:12px;color:#aeb8b1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#music #resultlist button{width:30px;height:30px;flex-shrink:0;font-size:13px;border:0;background:#1ed760;color:#08210e}
+#music #logoutmusic{align-self:flex-end;font-size:11px;padding:3px 8px;flex-shrink:0}
+#music #moremusic{align-self:center;flex-shrink:0}
+#music #playing{display:flex;align-items:center;gap:9px;margin:0;min-width:0;flex:1}
+#coverdirect{display:block;width:44px;height:44px;flex-shrink:0;line-height:0}
+#music #cover{width:44px;height:44px;object-fit:contain;border-radius:5px;cursor:pointer}
+#playing>div{min-width:0}#titlemusic{display:block;font-size:13px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#tracklink{text-decoration:none}#artistmusic{font-size:11px;color:#b3bdb6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#statemusic{display:none}
+#musicdock{flex-shrink:0;border-top:1px solid #ffffff25;padding-top:9px;display:flex;align-items:center;gap:8px}
+#controlsbar{display:flex;gap:3px;align-items:center;margin:0;flex-shrink:0}
+#music #controlsbar button{width:29px;height:29px;border:0;font-size:17px}
+#music #playmusic,#music #pausemusic{width:36px!important;height:36px!important;background:#1ed760;color:#071a0e}
+#music #stopmusic{display:none}#seek{flex-shrink:0;width:100%;accent-color:#1ed760;margin:0}#timeinfo{display:none}
+#music #volumecontainer{font-size:11px;flex-shrink:0}#vol{width:100px}
+#message{margin:0;font-size:11px;color:#b3bdb6;line-height:1.3;max-height:30px;overflow:auto;flex-shrink:0}
+#musicresize{position:absolute;left:0;top:0;width:24px;height:24px;cursor:nwse-resize;touch-action:none;color:#9bbba6;font-size:17px;user-select:none}
+#musicresize::after{content:'⤡';position:absolute;left:4px;top:1px}
+#music.music-mini{height:135px!important;min-height:135px}#music.music-mini #authenticated,#music.music-mini #loginmusic,#music.music-mini #message,#music.music-mini #volumecontainer,#music.music-mini #seek{display:none!important}
+#music button:focus-visible,#music a:focus-visible,#musicresize:focus-visible{outline:2px solid #1ed760;outline-offset:2px}
+#coverzoom{display:none!important}
+@media(max-width:380px){#resultlist .result-duration{display:none}#music{padding:10px}#music #controlsbar button{width:25px}}
 </style>
+<script>
+(()=>{
+const el=id=>document.getElementById(id),panel=el('music'),body=el('bodymusic');
+const dock=document.createElement('div');dock.id='musicdock';dock.append(el('playing'),el('controlsbar'));body.append(el('seek'),dock);
+const volume=el('vol').closest('div');volume.id='volumecontainer';el('authenticated').append(volume);
+const handle=document.createElement('div');handle.id='musicresize';handle.tabIndex=0;handle.setAttribute('role','button');handle.setAttribute('aria-label','Redimensionează playerul: trage de colț sau folosește săgețile');handle.title='Trage de acest colț pentru redimensionare';panel.append(handle);
+let savedHeight=610,expanded=false,previousSize=null;
+function size(w,h){panel.style.width=Math.max(Math.min(280,innerWidth-24),Math.min(w,innerWidth-24))+'px';panel.style.height=Math.max(190,Math.min(h,innerHeight-24))+'px'}
+function save(){try{localStorage.setItem('jurnal_music_size_v3',JSON.stringify({w:panel.offsetWidth,h:panel.offsetHeight}))}catch(e){}}
+try{const v=JSON.parse(localStorage.getItem('jurnal_music_size_v3'));if(v&&Number.isFinite(v.w)&&Number.isFinite(v.h))size(v.w,v.h)}catch(e){}
+handle.addEventListener('pointerdown',e=>{if(e.button!==0)return;panel.classList.remove('music-mini');el('minimize').textContent='−';const x=e.clientX,y=e.clientY,w=panel.offsetWidth,h=panel.offsetHeight;handle.setPointerCapture(e.pointerId);e.preventDefault();
+const move=ev=>size(w+x-ev.clientX,h+y-ev.clientY);const stop=()=>{handle.removeEventListener('pointermove',move);handle.removeEventListener('pointerup',stop);handle.removeEventListener('pointercancel',stop);save()};handle.addEventListener('pointermove',move);handle.addEventListener('pointerup',stop);handle.addEventListener('pointercancel',stop)});
+handle.addEventListener('keydown',e=>{const d={ArrowLeft:[20,0],ArrowRight:[-20,0],ArrowUp:[0,20],ArrowDown:[0,-20]}[e.key];if(d){e.preventDefault();size(panel.offsetWidth+d[0],panel.offsetHeight+d[1]);save()}});
+el('minimize').onclick=()=>{if(!panel.classList.contains('music-mini'))savedHeight=panel.offsetHeight;const mini=panel.classList.toggle('music-mini');el('minimize').textContent=mini?'+':'−';el('minimize').setAttribute('aria-label',mini?'Restaurare':'Minimizează');if(!mini)size(panel.offsetWidth,savedHeight)};
+el('expandmusic').onclick=()=>{panel.classList.remove('music-mini');el('minimize').textContent='−';if(!expanded){previousSize=[panel.offsetWidth,panel.offsetHeight];size(Math.min(850,innerWidth-24),innerHeight-24)}else if(previousSize)size(...previousSize);expanded=!expanded;el('expandmusic').setAttribute('aria-pressed',String(expanded));save()};
+addEventListener('resize',()=>{if(!panel.classList.contains('music-mini'))size(panel.offsetWidth,panel.offsetHeight)});
+})();
+</script>
 </body></html>
