@@ -827,4 +827,29 @@ for(const id of ['coverdirect','tracklink']){const link=E(id);link.removeAttribu
 E('logoutmusic').addEventListener('click',()=>{if(!view.hidden)close();latest=null});
 })();
 </script>
+
+<style id="artwork-only-style">
+#music #trackbigart{cursor:pointer}
+#music #trackbigart:focus-visible{outline:2px solid #b4ddbf;outline-offset:-3px}
+#artworkonly{position:fixed;inset:0;width:100vw;height:100dvh;max-width:none;max-height:none;margin:0;padding:20px;border:0;border-radius:0;background:rgba(5,10,7,.96);overflow:hidden;box-sizing:border-box;color:white}
+#artworkonly[open]{display:grid;place-items:center}
+#artworkonly::backdrop{background:#000b}
+#artworkonly img{display:block;width:100%;height:100%;min-width:0;min-height:0;max-width:100%;max-height:100%;object-fit:contain;cursor:pointer;user-select:none;-webkit-user-drag:none}
+@media(max-width:480px){#artworkonly{padding:12px}}
+</style>
+<script>
+(()=>{
+const cover=document.getElementById('trackbigart');
+const modal=document.createElement('dialog');modal.id='artworkonly';modal.setAttribute('aria-label','Coperta mărită. Apasă Escape sau clic pentru închidere.');modal.tabIndex=-1;
+const image=document.createElement('img');image.alt='Coperta albumului';modal.append(image);document.body.append(modal);
+let previousFocus=null;
+function openArt(){const src=cover.currentSrc||cover.getAttribute('src');if(cover.hidden||!src)return;previousFocus=document.activeElement;image.src=src;image.alt=cover.alt||'Coperta albumului';if(!modal.open)modal.showModal();modal.focus()}
+function closeArt(){if(modal.open)modal.close()}
+cover.tabIndex=0;cover.setAttribute('role','button');cover.setAttribute('aria-label','Afișează doar coperta mărită');cover.setAttribute('aria-haspopup','dialog');
+cover.addEventListener('click',openArt);
+cover.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openArt()}});
+modal.addEventListener('click',closeArt);
+modal.addEventListener('close',()=>{image.removeAttribute('src');if(previousFocus&&previousFocus.isConnected)previousFocus.focus()});
+})();
+</script>
 </body></html>
