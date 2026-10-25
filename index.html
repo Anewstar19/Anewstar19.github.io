@@ -647,7 +647,7 @@ if(!data||typeof data!=='object')throw Error('Spotify a trimis date într-un for
 E('loginmusic').onclick=async()=>{try{if(location.origin+'/'!==R)throw Error('Deschide '+R);const v=random(),st=random();sessionStorage.setItem('mb_v',v);sessionStorage.setItem('mb_s',st);const h=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(v));const ch=btoa(String.fromCharCode(...new Uint8Array(h))).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');location.assign('https://accounts.spotify.com/authorize?'+new URLSearchParams({client_id:C,response_type:'code',redirect_uri:R,scope:'streaming user-read-email user-read-private user-read-playback-state user-read-currently-playing user-modify-playback-state',state:st,code_challenge_method:'S256',code_challenge:ch}))}catch(e){M(e.message)}};
 E('logoutmusic').onclick=()=>{if(player)player.disconnect();player=null;device=null;initPromise=null;auth=null;sessionStorage.removeItem(K);E('playing').hidden=true;E('resultlist').replaceChildren();M('Deconectat.');ui()};let sdkResolve;const sdk=new Promise(r=>sdkResolve=r);window.onSpotifyWebPlaybackSDKReady=()=>sdkResolve();const script=document.createElement('script');script.src='https://sdk.scdn.co/spotify-player.js';script.onerror=()=>M('Playerul Spotify nu s-a încărcat. Verifică browserul.');document.head.appendChild(script);
 const fmt=n=>Math.floor((n||0)/60000)+':'+String(Math.floor((n||0)/1000)%60).padStart(2,'0');
-function display(st){state=st;if(!st)return;const t=st.track_window.current_track;E('playing').hidden=false;E('titlemusic').textContent=t.name;E('artistmusic').textContent=(t.artists||[]).map(x=>x.name).join(', ');E('statemusic').textContent=st.paused?'Pe pauză':'În redare · în jurnal';const img=t.album&&t.album.images&&t.album.images[0];E('cover').hidden=!img;if(img)E('cover').src=img.url;E('tracklink').href='https://open.spotify.com/track/'+t.id;E('coverdirect').href=E('tracklink').href;E('playmusic').hidden=!st.paused;E('pausemusic').hidden=st.paused;E('seek').value=st.duration?100*st.position/st.duration:0;E('timeinfo').textContent=fmt(st.position)+' / '+fmt(st.duration)}
+function display(st){state=st;if(!st)return;const t=st.track_window.current_track;E('resultlist').querySelectorAll('.result').forEach(row=>{const active=row.dataset.uri===t.uri;row.classList.toggle('is-current',active);if(active)row.setAttribute('aria-current','true');else row.removeAttribute('aria-current')});E('playing').hidden=false;E('titlemusic').textContent=t.name;E('artistmusic').textContent=(t.artists||[]).map(x=>x.name).join(', ');E('statemusic').textContent=st.paused?'Pe pauză':'În redare · în jurnal';const img=t.album&&t.album.images&&t.album.images[0];E('cover').hidden=!img;if(img)E('cover').src=img.url;E('tracklink').href='https://open.spotify.com/track/'+t.id;E('coverdirect').href=E('tracklink').href;E('playmusic').hidden=!st.paused;E('pausemusic').hidden=st.paused;E('seek').value=st.duration?100*st.position/st.duration:0;E('timeinfo').textContent=fmt(st.position)+' / '+fmt(st.duration)}
 async function setup(){if(device)return;if(initPromise)return initPromise;initPromise=(async()=>{await Promise.race([sdk,new Promise((_,rej)=>setTimeout(()=>rej(Error('Playerul nu s-a încărcat. Reîncarcă pagina.')),18000))]);await access();player=new Spotify.Player({name:'Jurnal de studiu',volume:.5,getOAuthToken:cb=>access().then(cb).catch(e=>M(e.message))});['initialization_error','authentication_error','account_error','playback_error'].forEach(ev=>player.addListener(ev,({message})=>M(message)));player.addListener('autoplay_failed',()=>M('Apasă Play pentru a permite sunetul.'));player.addListener('player_state_changed',display);player.addListener('not_ready',()=>{device=null;initPromise=null;M('Player deconectat. Reîncarcă pagina.');});await new Promise((res,rej)=>{const t=setTimeout(()=>rej(Error('Conectarea playerului a expirat. Reîncarcă pagina.')),20000);player.addListener('ready',({device_id})=>{device=device_id;clearTimeout(t);M('Caută o melodie și apasă ▶ lângă ea.');res()});player.connect().then(ok=>{if(!ok){clearTimeout(t);rej(Error('Browserul nu permite playerul. Verifică redarea conținutului protejat.'))}}).catch(e=>{clearTimeout(t);rej(e)})})})();try{await initPromise}catch(e){initPromise=null;throw e}}
 async function activate(){if(player)await player.activateElement();await setup();await player.activateElement();if(!await player.getCurrentState())await api('/me/player','PUT',{device_ids:[device],play:false})}
 async function run(fn){if(busy)return;busy=true;try{await fn()}catch(e){M(e.message)}finally{busy=false}}
@@ -666,7 +666,7 @@ if(!append){E('resultlist').replaceChildren();queue=[];E('resultlist').scrollTop
 searchQuery=q;searchType=type;searchOffset=offset+10;searchNext=page.next;
 if(type==='track')queue.push(...items.filter(x=>x.uri&&x.is_playable!==false).map(x=>x.uri));
 items.forEach(item=>{
-const row=document.createElement('div');row.className='result';
+const row=document.createElement('div');row.className='result';row.dataset.uri=item.uri||'';row.tabIndex=item.is_playable===false?-1:0;row.setAttribute('role','group');row.setAttribute('aria-label',item.name+' — apasă Enter pentru redare');row.setAttribute('aria-disabled',String(item.is_playable===false));
 const imdata=((item.album&&item.album.images)||item.images||[])[0];
 if(imdata){const im=document.createElement('img');im.src=imdata.url;im.alt='';im.loading='lazy';row.append(im)}
 const meta=document.createElement('div');meta.className='meta';
@@ -676,7 +676,7 @@ meta.append(title,artist);row.append(meta);
 if(item.duration_ms){const duration=document.createElement('small');duration.className='result-duration';duration.textContent=fmt(item.duration_ms);row.append(duration)}
 const button=document.createElement('button');button.type='button';button.textContent='▶';button.setAttribute('aria-label','Redă '+item.name);button.disabled=item.is_playable===false;
 button.onclick=()=>run(async()=>{await activate();const uris=[...queue],index=uris.indexOf(item.uri);const body=type==='track'?{uris:index>=0?uris:[item.uri],offset:{position:Math.max(index,0)}}:{context_uri:item.uri};await api('/me/player/play?device_id='+encodeURIComponent(device),'PUT',body);M('Redare cerută: '+item.name)});
-row.append(button);E('resultlist').append(row)
+row.onclick=e=>{if(e.target.closest('button,a')||button.disabled)return;button.click()};row.onkeydown=e=>{if(e.target!==row||button.disabled)return;if(e.key==='Enter'||e.key===' '){e.preventDefault();button.click()}};row.append(button);E('resultlist').append(row)
 });
 more.hidden=!searchNext;M(E('resultlist').children.length+' rezultate afișate'+(searchNext?' · Încarcă mai multe pentru a continua.':'.'));
 }catch(e){M(e.message)}finally{searchBusy=false;E('searchbutton').disabled=false;more.disabled=false}
@@ -741,4 +741,34 @@ el('expandmusic').onclick=()=>{panel.classList.remove('music-mini');el('minimize
 addEventListener('resize',()=>{if(!panel.classList.contains('music-mini'))size(panel.offsetWidth,panel.offsetHeight)});
 })();
 </script>
+
+<style id="music-aesthetic-polish">
+#music{background:radial-gradient(ellipse at 0% 0%,#34534288,transparent 65%),linear-gradient(155deg,#1b2420,#111613 75%);border:1px solid #b9dac32b;border-radius:20px;box-shadow:0 22px 70px #0006,inset 0 1px 0 #ffffff0c;color:#eff5f0}
+#music .music-heading{font-size:11px;letter-spacing:.11em;text-transform:uppercase;color:#b8d0bf;padding-bottom:6px}
+#music #querymusic{background:#ffffff0a;border-color:#ffffff18;box-shadow:inset 0 1px 3px #0002;transition:border-color .18s,background .18s}
+#music #querymusic:focus{outline:2px solid #9acfac80;outline-offset:1px;background:#ffffff10}
+#music #searchbutton{background:#bbdfc5;color:#132b1b;border:0;font-weight:650}
+#music select{border-color:#ffffff1c;background:#26332b;border-radius:10px}
+#music #resultlist{background:#0000000a;padding:3px;scrollbar-color:#69877566 transparent;scrollbar-width:thin}
+#music #resultlist .result{cursor:pointer;border-radius:10px;border:1px solid transparent;transition:background .16s,border-color .16s;gap:11px;padding:8px}
+#music #resultlist .result:hover{background:#ffffff0b;border-color:#ffffff0b}
+#music #resultlist .result:focus-visible{outline:2px solid #9acfac;outline-offset:-2px;background:#ffffff0b}
+#music #resultlist .result.is-current{background:#83bc9818;border-color:#9acfac30}
+#music #resultlist .result.is-current .meta span{color:#b9e7c5}
+#music #resultlist .result[aria-disabled=true]{opacity:.45;cursor:not-allowed}
+#resultlist .meta span{font-weight:550;line-height:1.5}#resultlist .meta small{line-height:1.6;color:#a4b3a9}
+#music #resultlist img{border-radius:7px;box-shadow:0 3px 9px #0003}
+#music #resultlist button{background:#a9d8b6;color:#122a19;transition:background .15s,transform .15s}
+#music #resultlist button:hover:not(:disabled){background:#d0efda;transform:scale(1.07)}
+#musicdock{border-top-color:#ffffff12;padding:10px 4px 3px;gap:10px}
+#coverdirect{border-radius:7px;overflow:hidden;box-shadow:0 3px 10px #0004}
+#music #playmusic,#music #pausemusic{background:#b4ddbf;color:#122a19}
+#music #controlsbar button:hover{background:#ffffff14}#music #controlsbar #playmusic:hover,#music #controlsbar #pausemusic:hover{background:#d0efda}
+#music #seek,#music #vol{accent-color:#b4ddbf}
+#music #moremusic{color:#c7e2cf;background:#ffffff06;border-color:#b4ddbf30;font-size:12px}
+#music #moremusic:hover{background:#b4ddbf15}
+#music #message{color:#a4b7aa;font-size:11px}
+#music button{transition:background .15s}#music #logoutmusic{opacity:.7}
+@media(prefers-reduced-motion:reduce){#music *{transition:none!important}}
+</style>
 </body></html>
