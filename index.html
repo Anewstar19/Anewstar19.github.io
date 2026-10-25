@@ -647,7 +647,7 @@ if(!data||typeof data!=='object')throw Error('Spotify a trimis date într-un for
 E('loginmusic').onclick=async()=>{try{if(location.origin+'/'!==R)throw Error('Deschide '+R);const v=random(),st=random();sessionStorage.setItem('mb_v',v);sessionStorage.setItem('mb_s',st);const h=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(v));const ch=btoa(String.fromCharCode(...new Uint8Array(h))).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');location.assign('https://accounts.spotify.com/authorize?'+new URLSearchParams({client_id:C,response_type:'code',redirect_uri:R,scope:'streaming user-read-email user-read-private user-read-playback-state user-read-currently-playing user-modify-playback-state',state:st,code_challenge_method:'S256',code_challenge:ch}))}catch(e){M(e.message)}};
 E('logoutmusic').onclick=()=>{if(player)player.disconnect();player=null;device=null;initPromise=null;auth=null;sessionStorage.removeItem(K);E('playing').hidden=true;E('resultlist').replaceChildren();M('Deconectat.');ui()};let sdkResolve;const sdk=new Promise(r=>sdkResolve=r);window.onSpotifyWebPlaybackSDKReady=()=>sdkResolve();const script=document.createElement('script');script.src='https://sdk.scdn.co/spotify-player.js';script.onerror=()=>M('Playerul Spotify nu s-a încărcat. Verifică browserul.');document.head.appendChild(script);
 const fmt=n=>Math.floor((n||0)/60000)+':'+String(Math.floor((n||0)/1000)%60).padStart(2,'0');
-function display(st){state=st;if(!st)return;const t=st.track_window.current_track;window.dispatchEvent(new CustomEvent('jurnal-track-state',{detail:{track:t,paused:st.paused}}));E('resultlist').querySelectorAll('.result').forEach(row=>{const active=row.dataset.uri===t.uri;row.classList.toggle('is-current',active);if(active)row.setAttribute('aria-current','true');else row.removeAttribute('aria-current')});E('playing').hidden=false;E('titlemusic').textContent=t.name;E('artistmusic').textContent=(t.artists||[]).map(x=>x.name).join(', ');E('statemusic').textContent=st.paused?'Pe pauză':'În redare · în jurnal';const img=t.album&&t.album.images&&t.album.images[0];E('cover').hidden=!img;if(img)E('cover').src=img.url;E('tracklink').href='https://open.spotify.com/track/'+t.id;E('coverdirect').href=E('tracklink').href;E('playmusic').hidden=!st.paused;E('pausemusic').hidden=st.paused;E('seek').value=st.duration?100*st.position/st.duration:0;E('timeinfo').textContent=fmt(st.position)+' / '+fmt(st.duration)}
+function display(st){state=st;if(!st)return;const t=st.track_window.current_track;window.dispatchEvent(new CustomEvent('jurnal-track-state',{detail:{track:t,paused:st.paused,position:st.position,duration:st.duration}}));E('resultlist').querySelectorAll('.result').forEach(row=>{const active=row.dataset.uri===t.uri;row.classList.toggle('is-current',active);if(active)row.setAttribute('aria-current','true');else row.removeAttribute('aria-current')});E('playing').hidden=false;E('titlemusic').textContent=t.name;E('artistmusic').textContent=(t.artists||[]).map(x=>x.name).join(', ');E('statemusic').textContent=st.paused?'Pe pauză':'În redare · în jurnal';const img=t.album&&t.album.images&&t.album.images[0];E('cover').hidden=!img;if(img)E('cover').src=img.url;E('tracklink').href='https://open.spotify.com/track/'+t.id;E('coverdirect').href=E('tracklink').href;E('playmusic').hidden=!st.paused;E('pausemusic').hidden=st.paused;E('seek').value=st.duration?100*st.position/st.duration:0;E('timeinfo').textContent=fmt(st.position)+' / '+fmt(st.duration)}
 async function setup(){if(device)return;if(initPromise)return initPromise;initPromise=(async()=>{await Promise.race([sdk,new Promise((_,rej)=>setTimeout(()=>rej(Error('Playerul nu s-a încărcat. Reîncarcă pagina.')),18000))]);await access();player=new Spotify.Player({name:'Jurnal de studiu',volume:.5,getOAuthToken:cb=>access().then(cb).catch(e=>M(e.message))});['initialization_error','authentication_error','account_error','playback_error'].forEach(ev=>player.addListener(ev,({message})=>M(message)));player.addListener('autoplay_failed',()=>M('Apasă Play pentru a permite sunetul.'));player.addListener('player_state_changed',display);player.addListener('not_ready',()=>{device=null;initPromise=null;M('Player deconectat. Reîncarcă pagina.');});await new Promise((res,rej)=>{const t=setTimeout(()=>rej(Error('Conectarea playerului a expirat. Reîncarcă pagina.')),20000);player.addListener('ready',({device_id})=>{device=device_id;clearTimeout(t);M('Caută o melodie și apasă ▶ lângă ea.');res()});player.connect().then(ok=>{if(!ok){clearTimeout(t);rej(Error('Browserul nu permite playerul. Verifică redarea conținutului protejat.'))}}).catch(e=>{clearTimeout(t);rej(e)})})})();try{await initPromise}catch(e){initPromise=null;throw e}}
 async function activate(){if(player)await player.activateElement();await setup();await player.activateElement();if(!await player.getCurrentState())await api('/me/player','PUT',{device_ids:[device],play:false})}
 async function run(fn){if(busy)return;busy=true;try{await fn()}catch(e){M(e.message)}finally{busy=false}}
@@ -828,28 +828,55 @@ E('logoutmusic').addEventListener('click',()=>{if(!view.hidden)close();latest=nu
 })();
 </script>
 
-<style id="artwork-only-style">
-#music #trackbigart{cursor:pointer}
-#music #trackbigart:focus-visible{outline:2px solid #b4ddbf;outline-offset:-3px}
-#artworkonly{position:fixed;inset:0;width:100vw;height:100dvh;max-width:none;max-height:none;margin:0;padding:20px;border:0;border-radius:0;background:rgba(5,10,7,.96);overflow:hidden;box-sizing:border-box;color:white}
-#artworkonly[open]{display:grid;place-items:center}
-#artworkonly::backdrop{background:#000b}
-#artworkonly img{display:block;width:100%;height:100%;min-width:0;min-height:0;max-width:100%;max-height:100%;object-fit:contain;cursor:pointer;user-select:none;-webkit-user-drag:none}
-@media(max-width:480px){#artworkonly{padding:12px}}
+
+<style id="immersive-music-style">
+#music #trackbigart{cursor:pointer}#music #trackbigart:focus-visible{outline:2px solid #b4ddbf;outline-offset:-3px}
+#musiccinema,#musiccinema *{box-sizing:border-box}
+#musiccinema{position:fixed;inset:0;width:100vw;height:100dvh;max-width:none;max-height:none;padding:0;margin:0;border:0;border-radius:0;overflow:hidden;background:#15231a;color:#fff;font:14px system-ui;--cinema-art:none}
+#musiccinema[open]{display:grid;grid-template-rows:64px minmax(0,1fr) 116px}
+#musiccinema::backdrop{background:#000}
+#cinemabg{position:absolute;inset:-50px;background-image:linear-gradient(#0003,#0008),var(--cinema-art);background-size:cover;background-position:center;filter:blur(65px) saturate(.9) brightness(.65);transform:scale(1.15);pointer-events:none;z-index:0}
+#musiccinema header{position:relative;z-index:1;display:flex;align-items:center;gap:18px;padding:12px 26px;min-width:0}
+#cinemaheading{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;font-weight:650;flex:1}
+#musiccinema button{display:grid;place-items:center;padding:0;margin:0;width:34px;height:34px;border:0;border-radius:50%;background:transparent;color:white;cursor:pointer;font:inherit;font-size:21px;line-height:1}
+#musiccinema button:hover{background:#ffffff18}
+#musiccinema button:focus-visible,#musiccinema input:focus-visible{outline:2px solid #fff;outline-offset:3px}
+#musiccinema #cinemaback{width:auto;padding:0 12px;border-radius:20px;font-size:13px;background:#0003}
+#cinemastage{position:relative;z-index:1;min-height:0;min-width:0;display:flex;justify-content:center;align-items:center;padding:24px 32px 32px;overflow:hidden}
+#cinemacover{display:block;width:100%;height:100%;min-width:0;min-height:0;object-fit:contain;filter:drop-shadow(0 14px 28px #0005)}
+#cinemafooter{position:relative;z-index:1;display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,2fr) minmax(100px,1fr);gap:24px;align-items:center;background:#080b09;padding:14px 24px;border-top:1px solid #ffffff0d;min-width:0;min-height:0}
+#cinemameta{display:flex;align-items:center;gap:12px;min-width:0}#cinemathumb{width:56px;height:56px;border-radius:5px;object-fit:contain;flex-shrink:0}
+#cinemameta>div{min-width:0}#cinematitle{display:block;font-size:14px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#cinemaartist{display:block;margin-top:5px;color:#b6beb8;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#cinematransport{display:flex;justify-content:center;align-items:center;gap:16px;margin-bottom:8px}
+#musiccinema #cinemaplay{width:40px;height:40px;background:#fff;color:#111;font-size:21px}
+#cinemaprogress{display:flex;align-items:center;gap:9px;font-size:11px;color:#b8c0ba;font-variant-numeric:tabular-nums}
+#cinemaseek{width:100%;min-width:0;margin:0;accent-color:#fff;height:16px;cursor:pointer}
+#cinemavolume{display:flex;align-items:center;justify-content:flex-end;gap:8px;font-size:18px}#cinemavol{width:100px;max-width:100%;accent-color:#fff;cursor:pointer}
+#cinemastatus{position:absolute;left:24px;right:24px;bottom:2px;max-height:13px;overflow:hidden;font-size:10px;color:#c2c9c4;text-align:center;margin:0;line-height:1.2}
+@media(max-width:650px){#musiccinema[open]{grid-template-rows:54px minmax(0,1fr) 160px}#musiccinema header{padding:8px 12px;gap:10px}#cinemastage{padding:14px 16px 22px}#cinemafooter{grid-template-columns:minmax(0,1fr);grid-template-rows:38px auto;gap:8px;padding:10px 16px 17px}#cinemathumb{width:36px;height:36px}#cinematitle{font-size:12px}#cinemaartist{font-size:10px;margin-top:2px}#cinemavolume{display:none}#cinematransport{gap:20px;margin-bottom:3px}#musiccinema #cinemaplay{width:34px;height:34px}#cinemastatus{left:12px;right:12px}}
+@media(max-height:440px) and (min-width:651px){#musiccinema[open]{grid-template-rows:44px minmax(0,1fr) 90px}#cinemastage{padding:8px 20px}#cinemafooter{padding:8px 18px 14px}#cinemathumb{width:40px;height:40px}}
 </style>
 <script>
 (()=>{
-const cover=document.getElementById('trackbigart');
-const modal=document.createElement('dialog');modal.id='artworkonly';modal.setAttribute('aria-label','Coperta mărită. Apasă Escape sau clic pentru închidere.');modal.tabIndex=-1;
-const image=document.createElement('img');image.alt='Coperta albumului';modal.append(image);document.body.append(modal);
-let previousFocus=null;
-function openArt(){const src=cover.currentSrc||cover.getAttribute('src');if(cover.hidden||!src)return;previousFocus=document.activeElement;image.src=src;image.alt=cover.alt||'Coperta albumului';if(!modal.open)modal.showModal();modal.focus()}
-function closeArt(){if(modal.open)modal.close()}
-cover.tabIndex=0;cover.setAttribute('role','button');cover.setAttribute('aria-label','Afișează doar coperta mărită');cover.setAttribute('aria-haspopup','dialog');
-cover.addEventListener('click',openArt);
-cover.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openArt()}});
-modal.addEventListener('click',closeArt);
-modal.addEventListener('close',()=>{image.removeAttribute('src');if(previousFocus&&previousFocus.isConnected)previousFocus.focus()});
+const E=id=>document.getElementById(id),cover=E('trackbigart');
+const modal=document.createElement('dialog');modal.id='musiccinema';modal.setAttribute('aria-label','Vizualizare muzicală extinsă');
+modal.innerHTML='<div id="cinemabg" aria-hidden="true"></div><header><span id="cinemaheading"></span><button id="cinemaback" type="button">← Înapoi</button></header><div id="cinemastage"><img id="cinemacover" alt="Coperta melodiei"></div><footer id="cinemafooter"><div id="cinemameta"><img id="cinemathumb" alt=""><div><span id="cinematitle"></span><span id="cinemaartist"></span></div></div><div><div id="cinematransport"><button id="cinemaprev" aria-label="Melodia precedentă">⏮</button><button id="cinemaplay" aria-label="Redare">▶</button><button id="cinemanext" aria-label="Melodia următoare">⏭</button></div><div id="cinemaprogress"><span id="cinemaposition">0:00</span><input id="cinemaseek" type="range" min="0" max="100" step="0.1" value="0" aria-label="Poziția în melodie"><span id="cinemaduration">0:00</span></div></div><label id="cinemavolume"><span aria-hidden="true">♪</span><input id="cinemavol" type="range" min="0" max="100" value="50" aria-label="Volum"></label><p id="cinemastatus" role="status"></p></footer>';
+document.body.append(modal);
+let lastState=null,previousFocus=null,lastSource='';
+const fmt=n=>Math.floor((n||0)/60000)+':'+String(Math.floor((n||0)/1000)%60).padStart(2,'0');
+function setCover(src){if(!src||src===lastSource)return;lastSource=src;E('cinemacover').src=src;E('cinemathumb').src=src;modal.style.setProperty('--cinema-art','url('+JSON.stringify(src)+')')}
+function metadata(track){if(!track)return;E('cinemaheading').textContent=track.name||'';E('cinematitle').textContent=track.name||'';E('cinemaartist').textContent=(track.artists||[]).map(x=>x.name).join(', ');const images=(track.album&&track.album.images)||[];const image=images.reduce((a,b)=>!a||(b.width||0)>(a.width||0)?b:a,null);if(image)setCover(image.url)}
+function syncControls(){const paused=lastState?lastState.paused:!E('pausemusic').hidden?false:true;E('cinemaplay').textContent=paused?'▶':'Ⅱ';E('cinemaplay').setAttribute('aria-label',paused?'Redare':'Pauză');if(lastState){E('cinemaposition').textContent=fmt(lastState.position);E('cinemaduration').textContent=fmt(lastState.duration);if(document.activeElement!==E('cinemaseek'))E('cinemaseek').value=lastState.duration?lastState.position*100/lastState.duration:0}E('cinemastatus').textContent=E('message').textContent}
+function openCinema(){const src=cover.currentSrc||cover.getAttribute('src');if(cover.hidden||!src)return;previousFocus=document.activeElement;E('cinemaheading').textContent=E('trackdetailtitle').textContent;E('cinematitle').textContent=E('trackdetailtitle').textContent;E('cinemaartist').textContent=E('trackdetailartist').textContent;setCover(src);E('cinemavol').value=E('vol').value;syncControls();if(!modal.open)modal.showModal();E('cinemaback').focus()}
+function closeCinema(){if(modal.open)modal.close()}
+cover.tabIndex=0;cover.setAttribute('role','button');cover.setAttribute('aria-label','Deschide vizualizarea muzicală extinsă');cover.setAttribute('aria-haspopup','dialog');cover.addEventListener('click',openCinema);cover.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openCinema()}});
+E('cinemaback').onclick=closeCinema;modal.addEventListener('close',()=>{if(previousFocus&&previousFocus.isConnected)previousFocus.focus()});
+E('cinemaprev').onclick=()=>E('previousmusic').click();E('cinemanext').onclick=()=>E('nextmusic').click();
+E('cinemaplay').onclick=()=>{const paused=lastState?lastState.paused:E('pausemusic').hidden;E(paused?'playmusic':'pausemusic').click()};
+E('cinemaseek').addEventListener('change',()=>{E('seek').value=E('cinemaseek').value;E('seek').dispatchEvent(new Event('change',{bubbles:true}))});
+E('cinemavol').addEventListener('change',()=>{E('vol').value=E('cinemavol').value;E('vol').dispatchEvent(new Event('change',{bubbles:true}))});
+window.addEventListener('jurnal-track-state',e=>{lastState=e.detail;if(modal.open){metadata(lastState.track);syncControls()}});
+new MutationObserver(()=>{if(modal.open)E('cinemastatus').textContent=E('message').textContent}).observe(E('message'),{childList:true,subtree:true,characterData:true});
 })();
 </script>
 </body></html>
