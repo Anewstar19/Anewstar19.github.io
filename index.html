@@ -879,4 +879,71 @@ window.addEventListener('jurnal-track-state',e=>{lastState=e.detail;if(modal.ope
 new MutationObserver(()=>{if(modal.open)E('cinemastatus').textContent=E('message').textContent}).observe(E('message'),{childList:true,subtree:true,characterData:true});
 })();
 </script>
+
+<style id="jurnal-lyrics-style">
+#musiccinema #cinemalyricsbutton{width:auto;padding:0 12px;border-radius:18px;font-size:13px;background:#0003}
+#musiccinema #cinemalyricsbutton[aria-pressed=true]{background:#ffffff26}
+#cinemastage.lyrics-visible{display:block;padding:0;overflow:hidden}
+#cinemastage.lyrics-visible #cinemacover{display:none}
+#cinemalyrics{height:100%;min-height:0;display:grid;grid-template-rows:auto minmax(0,1fr);max-width:950px;margin:0 auto;padding:12px 28px 20px}
+#cinemalyrics[hidden]{display:none!important}
+#lyricsnotice{font-size:12px;line-height:1.5;color:#dce7df;padding:4px 0 12px}
+#lyricsnotice a{color:inherit;text-decoration:underline}
+#lyricslines{min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:#ffffff55 transparent;overscroll-behavior:contain;padding:20px 0 40px;scroll-behavior:smooth}
+#lyricslines p{font-size:clamp(22px,3.5vw,42px);font-weight:700;line-height:1.45;color:#ffffff80;white-space:pre-wrap;overflow-wrap:anywhere;margin:0 0 20px;transition:color .18s}
+#lyricslines p.lyrics-active{color:#fff}#lyricslines.lyrics-plain p{color:#ffffffe6}
+#lyricslines .lyrics-message{font-size:18px;font-weight:400;color:#e2e9e4}
+@media(max-width:650px){#cinemalyrics{padding:8px 16px 16px}#musiccinema #cinemalyricsbutton{padding:0 9px;font-size:12px}#lyricsnotice{font-size:11px}#lyricslines p{margin-bottom:15px}}
+@media(prefers-reduced-motion:reduce){#lyricslines{scroll-behavior:auto}#lyricslines p{transition:none}}
+</style>
+<script>
+(()=>{
+const E=id=>document.getElementById(id),modal=E('musiccinema'),stage=E('cinemastage');
+const button=document.createElement('button');button.id='cinemalyricsbutton';button.type='button';button.textContent='Versuri';button.setAttribute('aria-pressed','false');button.setAttribute('aria-controls','cinemalyrics');E('cinemaback').before(button);
+const pane=document.createElement('section');pane.id='cinemalyrics';pane.hidden=true;pane.setAttribute('aria-label','Versurile melodiei');
+pane.innerHTML='<div id="lyricsnotice" role="status"></div><div id="lyricslines" tabindex="0" aria-label="Textul versurilor"></div>';stage.append(pane);
+let state=null,received=0,currentKey='',loadedKey='',lines=[],active=-1,controller=null,generation=0,nextRequest=0,manualUntil=0;
+const cache=new Map();
+const key=t=>t&&(t.uri||[t.name,(t.artists||[]).map(a=>a.name).join(', '),t.album&&t.album.name].join('|'));
+function notice(text){E('lyricsnotice').replaceChildren(document.createTextNode(text+' · '));const link=document.createElement('a');link.href='https://lrclib.net/';link.textContent='Sursă: LRCLIB';link.target='_blank';link.rel='noopener noreferrer';E('lyricsnotice').append(link)}
+function message(text){E('lyricslines').replaceChildren();const p=document.createElement('p');p.className='lyrics-message';p.textContent=text;E('lyricslines').append(p)}
+function parseLRC(text){const result=[];let offset=0;const match=String(text||'').match(/\[offset:([+-]?\d+)\]/i);if(match)offset=Number(match[1]);
+for(const row of String(text||'').split(/\r?\n/)){const stamps=[...row.matchAll(/\[(\d+):(\d{1,2})(?:[.:](\d{1,3}))?\]/g)];if(!stamps.length)continue;const value=row.replace(/\[[^\]]*\]/g,'').trim();for(const m of stamps)result.push({time:Number(m[1])*60000+Number(m[2])*1000+Number(('0.'+(m[3]||'0')))*1000-offset,text:value})}
+return result.sort((a,b)=>a.time-b.time)}
+function position(){if(!state)return 0;return Math.max(0,Math.min(state.duration||Infinity,(state.position||0)+(state.paused?0:performance.now()-received)))}
+function highlight(){if(pane.hidden||!modal.open||!lines.length)return;const now=position();let index=-1;for(let i=0;i<lines.length;i++){if(lines[i].time<=now)index=i;else break}if(index===active)return;const nodes=E('lyricslines').children;if(active>=0&&nodes[active])nodes[active].classList.remove('lyrics-active');active=index;if(index>=0&&nodes[index]){nodes[index].classList.add('lyrics-active');if(Date.now()>manualUntil){const list=E('lyricslines'),row=nodes[index];const top=list.scrollTop+row.getBoundingClientRect().top-list.getBoundingClientRect().top-list.clientHeight*.35;list.scrollTo({top:Math.max(0,top),behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})}}}
+function showRecord(record){lines=[];active=-1;E('lyricslines').classList.remove('lyrics-plain');E('lyricslines').replaceChildren();E('lyricslines').scrollTop=0;manualUntil=0;
+if(!record){notice('Versuri indisponibile');message('Nu am găsit versuri pentru această melodie.');return}
+if(record.instrumental){notice('Piesă instrumentală');message('Această piesă este marcată drept instrumentală.');return}
+lines=parseLRC(record.syncedLyrics);
+if(lines.length){notice('Versuri sincronizate');for(const line of lines){const p=document.createElement('p');p.textContent=line.text||'♪';E('lyricslines').append(p)}highlight()}
+else if(record.plainLyrics){notice('Versuri fără sincronizare');E('lyricslines').classList.add('lyrics-plain');for(const line of record.plainLyrics.split(/\r?\n/)){const p=document.createElement('p');p.textContent=line||' ';E('lyricslines').append(p)}}
+else{notice('Versuri indisponibile');message('Nu am găsit textul versurilor pentru această melodie.')}
+}
+async function loadLyrics(){
+const t=state&&state.track;if(!t){notice('Aștept melodia curentă');message('Pornește o melodie pentru a căuta versurile.');return}
+const id=key(t);if(loadedKey===id)return;loadedKey=id;
+if(controller)controller.abort();const request=++generation;
+if(cache.has(id)){showRecord(cache.get(id));return}
+lines=[];active=-1;notice('Caut versurile…');message('Se încarcă…');
+if(Date.now()<nextRequest){loadedKey='';notice('Pauză temporară');message('Serviciul de versuri cere o pauză. Încearcă din nou mai târziu, revenind la copertă și apăsând Versuri.');return}
+controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),15000);
+try{
+const query=new URLSearchParams({track_name:t.name||'',artist_name:(t.artists&&t.artists[0]&&t.artists[0].name)||''});if(t.album&&t.album.name)query.set('album_name',t.album.name);const duration=Math.round((state.duration||t.duration_ms||0)/1000);if(duration>=1&&duration<=3600)query.set('duration',String(duration));
+nextRequest=Date.now()+400;
+const response=await fetch('https://lrclib.net/api/get?'+query,{headers:{Accept:'application/json','Lrclib-Client':'JurnalDeStudiu/1.0 (https://anewstar19.github.io/)'},signal:controller.signal});
+if(request!==generation)return;
+if(response.status===429||response.status===503){const raw=response.headers.get('Retry-After');const numeric=Number(raw);const seconds=raw&&Number.isFinite(numeric)?numeric:raw?Math.max(1,(Date.parse(raw)-Date.now())/1000):30;nextRequest=Date.now()+(Number.isFinite(seconds)?Math.max(1,seconds):30)*1000+Math.random()*1000;throw Error('Serviciul de versuri este ocupat. Încearcă din nou mai târziu.')}
+let data=null;if(response.status!==404){if(!response.ok)throw Error('Versurile nu au putut fi încărcate acum.');data=await response.json()}
+if(request!==generation)return;
+cache.set(id,data);if(cache.size>30)cache.delete(cache.keys().next().value);showRecord(data);
+}catch(error){if(request!==generation)return;loadedKey='';notice('Versuri indisponibile momentan');message(error.name==='AbortError'?'Cererea a durat prea mult. Revino la copertă și încearcă din nou.':error.message)}finally{clearTimeout(timeout)}
+}
+button.onclick=()=>{pane.hidden=!pane.hidden;stage.classList.toggle('lyrics-visible',!pane.hidden);button.setAttribute('aria-pressed',String(!pane.hidden));button.textContent=pane.hidden?'Versuri':'Copertă';if(!pane.hidden){loadLyrics();highlight()}};
+E('lyricslines').addEventListener('wheel',()=>manualUntil=Date.now()+5000,{passive:true});E('lyricslines').addEventListener('touchstart',()=>manualUntil=Date.now()+5000,{passive:true});E('lyricslines').addEventListener('keydown',()=>manualUntil=Date.now()+5000);
+window.addEventListener('jurnal-track-state',e=>{state=e.detail;received=performance.now();const id=key(state.track);if(id!==currentKey){currentKey=id;loadedKey='';lines=[];active=-1;if(controller)controller.abort();generation++;if(!pane.hidden&&modal.open)loadLyrics()}highlight()});
+new MutationObserver(()=>{if(modal.open&&!pane.hidden)loadLyrics()}).observe(modal,{attributes:true,attributeFilter:['open']});
+setInterval(highlight,150);
+})();
+</script>
 </body></html>
