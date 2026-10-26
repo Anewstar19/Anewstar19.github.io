@@ -395,7 +395,7 @@ function renderDay(){
   var done=[];S.subjects.forEach(function(s){s.topics.forEach(function(t){if(t.done&&t.doneOn==k)done.push(esc(s.name)+": "+esc(t.t))})});
   if(done.length)h+='<div class="dsub" style="display:block"><b>Terminat în ziua asta</b><ul style="margin:6px 0 0;padding-left:18px">'+done.map(function(x){return"<li>"+x+"</li>"}).join("")+'</ul></div>';
   if(S.subjects.length&&k==todayK()){
-    h+='<div class="dsub"><select id="tSubj">'+S.subjects.map(function(s){return'<option value="'+s.id+'">'+esc(s.name)+'</option>'}).join("")+'</select><label class="hrs"><input type="number" id="tHrs" min="0" max="12" step="1" inputmode="numeric" value="'+Math.floor(goalM()/60)+'"> h</label><label class="hrs"><input type="number" id="tMin" min="0" max="59" step="5" inputmode="numeric" value="'+(goalM()%60)+'"> min</label><button class="p" data-act="tstart">✈️ Începe sesiunea de studiu</button></div>';
+    h+='<div class="dsub"><select id="tSubj">'+S.subjects.map(function(s){return'<option value="'+s.id+'">'+esc(s.name)+'</option>'}).join("")+'</select><label class="hrs"><input type="number" id="tHrs" min="0" max="12" step="1" inputmode="numeric" value="'+Math.floor(goalM()/60)+'"> h</label><label class="hrs"><input type="number" id="tMin" min="0" max="59" step="5" inputmode="numeric" value="'+(goalM()%60)+'"> min</label><button class="p" data-act="tstart">Începe sesiunea de studiu</button></div>';
   }
   $("dayCard").innerHTML=h;updTimer();
 }
@@ -455,7 +455,7 @@ document.addEventListener("click",function(e){
   if(a=="prev"||a=="next"){var d=new Date(S.view[0],S.view[1]+(a=="next"?1:-1),1);S.view=[d.getFullYear(),d.getMonth()];renderCal();return}
   if(a=="selday"){S.sel=el.dataset.k;renderCal();renderDay();return}
   if(a=="addmin"){addMin(S.sel,el.dataset.s,parseInt(el.dataset.m,10));return}
-  if(a=="tstart"){var hh=parseInt($("tHrs").value,10)||0,mm=parseInt($("tMin").value,10)||0;hh=Math.max(0,Math.min(12,hh));mm=Math.max(0,Math.min(59,mm));var tm=hh*60+mm;if(tm<1){note("Alege cât vrei să înveți: ore și/sau minute (ex: 1 h 30 min).");return}GMEM=tm;try{localStorage.setItem("jurnal-studiu-min",tm)}catch(e){}GOAL=tm;startSession($("tSubj").value);return}
+  if(a=="tstart"){var hh=parseInt($("tHrs").value,10)||0,mm=parseInt($("tMin").value,10)||0;hh=Math.max(0,Math.min(12,hh));mm=Math.max(0,Math.min(59,mm));var tm=hh*60+mm;if(tm<1){note("Alege cât vrei să înveți: ore și/sau minute (ex: 1 h 30 min).");return}GMEM=tm;try{localStorage.setItem("jurnal-studiu-min",tm)}catch(e){}GOAL=tm;chooseStudySession($("tSubj").value);return}
 });
 document.addEventListener("keydown",function(e){
   if(e.key!="Enter")return;var id=e.target.id;
@@ -532,25 +532,39 @@ function tearIn(){
   setTimeout(function(){if(SS===me)t.classList.add("fade")},2150);
   setTimeout(function(){t.hidden=true;if(SS===me){me.intro=false;me.last=Date.now()}},2900);
 }
-function startSession(sid){
-  if(!sid||!subj(sid))return;
-  SS={sid:sid,acc:0,last:Date.now(),paused:false,intro:true};tearIn();
-  $("ssSubj").textContent="📚 "+subj(sid).name+(S.profiles.length>1?" · "+prof().name:"");setBtn("ssPause","pause","Pauză");ov.classList.remove("paused");
-  ov.hidden=false;document.body.style.overflow="hidden";vidStart();
-  cur="write";setAct(cur);sv={ph:"away",x:1100,t:-7,step:0};st.style.transform="translate(1100px,428px)";st.setAttribute("class","");
-  lastF=performance.now();nextAct();requestAnimationFrame(sloop);
+function chooseStudySession(sid){
+ if(SS||T){note("Există deja un cronometru activ. Încheie-l înainte de a începe altă sesiune.");return}
+ if(!sid||!subj(sid))return;
+ var picker=$("studyModePicker");$("studyModeSummary").textContent=subj(sid).name+" · "+fmt(GOAL);
+ $("chooseAirSession").onclick=function(){picker.close();startSession(sid,"airplane")};
+ $("chooseMusicSession").onclick=function(){picker.close();startSession(sid,"music")};
+ $("cancelStudyMode").onclick=function(){picker.close()};if(!picker.open)picker.showModal();
+}
+function startSession(sid,mode){
+ if(SS||T||!sid||!subj(sid))return;
+ mode=mode==="music"?"music":"airplane";
+ SS={sid:sid,mode:mode,acc:0,last:Date.now(),paused:false,intro:mode!=="music"};
+ $("ssSubj").textContent="📚 "+subj(sid).name+(S.profiles.length>1?" · "+prof().name:"");setBtn("ssPause","pause","Pauză");ov.classList.remove("paused");
+ document.body.style.overflow="hidden";
+ if(mode==="music"){
+  ov.hidden=true;vid.pause();vid2.pause();$("tk").hidden=true;
+  window.dispatchEvent(new CustomEvent('study-music-begin',{detail:{subject:subj(sid).name,goal:GOAL}}));clock();return;
+ }
+ document.body.classList.add("airplane-study-active");tearIn();ov.hidden=false;vidStart();
+ cur="write";setAct(cur);sv={ph:"away",x:1100,t:-7,step:0};st.style.transform="translate(1100px,428px)";st.setAttribute("class","");
+ lastF=performance.now();nextAct();requestAnimationFrame(sloop);
 }
 function clock(){
   if(!SS)return;var n=Date.now();if(!SS.paused&&!SS.intro)SS.acc+=n-SS.last;SS.last=n;
-  var s=Math.floor(SS.acc/1000);sky(PV!==null?PV:Math.min(1,SS.acc/(GOAL*60000)));$("ssClock").textContent=pad(Math.floor(s/3600))+":"+pad(Math.floor(s/60)%60)+":"+pad(s%60);
+  var s=Math.floor(SS.acc/1000);if(SS.mode!=="music")sky(PV!==null?PV:Math.min(1,SS.acc/(GOAL*60000)));else window.dispatchEvent(new CustomEvent("study-music-tick",{detail:{elapsed:SS.acc,paused:SS.paused,goal:GOAL,subject:subj(SS.sid).name}}));$("ssClock").textContent=pad(Math.floor(s/3600))+":"+pad(Math.floor(s/60)%60)+":"+pad(s%60);
 }
 setInterval(clock,250);
 function closeSession(saveIt){
-  clock();
+  if(!SS)return;clock();var wasMusic=SS.mode==="music";if(wasMusic)window.dispatchEvent(new Event("study-music-end"));
   if(saveIt){var m=Math.round(SS.acc/60000);if(m>=1){S.sel=todayK();var d=new Date();S.view=[d.getFullYear(),d.getMonth()];addMin(todayK(),SS.sid,m)}else note("Sesiunea a avut sub un minut, așa că nu am salvat-o.")}
-  SS=null;ov.hidden=true;vid.pause();LAND=false;vid2.pause();try{vid2.currentTime=0}catch(e){}vid2.style.opacity=0;$("tk").hidden=true;document.body.style.overflow="";clearTimeout(actT);render();
+  SS=null;document.body.classList.remove("airplane-study-active");ov.hidden=true;vid.pause();LAND=false;vid2.pause();try{vid2.currentTime=0}catch(e){}vid2.style.opacity=0;$("tk").hidden=true;document.body.style.overflow="";clearTimeout(actT);render();
 }
-$("ssPause").onclick=function(){if(!SS)return;clock();SS.paused=!SS.paused;ov.classList.toggle("paused",SS.paused);if(SS.paused)vid.pause();else vid.play().catch(function(){});if(SS.paused)setBtn("ssPause","play","Continuă");else setBtn("ssPause","pause","Pauză")};
+$("ssPause").onclick=function(){if(!SS)return;clock();SS.paused=!SS.paused;ov.classList.toggle("paused",SS.paused);if(SS.mode!=="music"){if(SS.paused)vid.pause();else vid.play().catch(function(){})}if(SS.paused)setBtn("ssPause","play","Continuă");else setBtn("ssPause","pause","Pauză");if(SS.mode==="music")clock()};
 $("ssEnd").onclick=function(){if(SS)closeSession(true)};
 $("ssX").onclick=function(){if(SS)ask("Ieși fără să salvezi timpul acestei sesiuni?","Ieși",function(){if(SS)closeSession(false)})};
 function sloop(now){
@@ -944,6 +958,64 @@ E('lyricslines').addEventListener('wheel',()=>manualUntil=Date.now()+5000,{passi
 window.addEventListener('jurnal-track-state',e=>{state=e.detail;received=performance.now();const id=key(state.track);if(id!==currentKey){currentKey=id;loadedKey='';lines=[];active=-1;if(controller)controller.abort();generation++;if(!pane.hidden&&modal.open)loadLyrics()}highlight()});
 new MutationObserver(()=>{if(modal.open&&!pane.hidden)loadLyrics()}).observe(modal,{attributes:true,attributeFilter:['open']});
 setInterval(highlight,150);
+})();
+</script>
+
+<style id="study-mode-style">
+#studyModePicker{width:min(540px,calc(100vw - 28px));max-height:90dvh;overflow:auto;padding:25px;background:#17251d;color:#edf5ef;border:1px solid #ffffff25;border-radius:20px;font:14px system-ui;box-shadow:0 20px 80px #0007}
+#studyModePicker::backdrop{background:#0009;backdrop-filter:blur(5px)}
+#studyModePicker h2{margin:0 0 7px;font-size:23px}#studyModeSummary{color:#b6cbbc;margin:0 0 20px}
+#studyModePicker .mode-options{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+#studyModePicker .mode-options button{background:#ffffff08;color:inherit;border:1px solid #ffffff22;border-radius:15px;padding:18px;text-align:left;cursor:pointer;font:inherit}
+#studyModePicker .mode-options button:hover{background:#b4ddbf18;border-color:#b4ddbf88}
+#studyModePicker .mode-options strong{display:block;font-size:19px;margin:8px 0}#studyModePicker .mode-options span{display:block;font-size:12px;line-height:1.5;color:#bbcec1}
+#studyModePicker .mode-options .mode-icon{font-size:30px;color:white}
+#studyModePicker .mode-note{font-size:11px;line-height:1.5;color:#b1c4b8;margin:17px 0}
+#cancelStudyMode{padding:8px 14px;background:transparent;color:#e0eee4;border:1px solid #ffffff35;border-radius:9px;cursor:pointer}
+#musicStudy{position:fixed;inset:0;z-index:1000000;background:radial-gradient(ellipse at top,#274333,#0d1510 75%);color:#edf5ef;padding:20px;display:grid;grid-template-rows:auto minmax(0,1fr);gap:16px;font:14px system-ui;overflow:hidden}
+#musicStudy[hidden]{display:none!important}
+#musicStudyHeader{display:flex;align-items:center;gap:20px;flex-wrap:wrap;max-width:1200px;width:100%;margin:0 auto}
+#musicStudyHeader>div:first-child{flex:1;min-width:160px}
+#musicStudyHeader h2{margin:0 0 5px;font-size:19px}#musicStudySubject{color:#adc7b5;font-size:13px}
+#musicStudyClock{font-size:30px;font-weight:650;font-variant-numeric:tabular-nums;letter-spacing:.03em}
+.study-actions{display:flex;gap:7px;flex-wrap:wrap}
+#musicStudy .study-actions button,#musiccinema .study-actions button{width:auto;height:auto;padding:8px 12px;border:1px solid #ffffff30;border-radius:9px;background:#ffffff08;color:#edf5ef;font:12px system-ui;cursor:pointer;line-height:1.2}
+#musicStudy .study-actions .study-save,#musiccinema .study-actions .study-save{background:#b4ddbf;color:#163020;border-color:transparent}
+#musicStudyMain{min-width:0;min-height:0;max-width:1200px;width:100%;margin:0 auto}
+body.music-study-active #music{position:relative!important;inset:auto!important;display:grid!important;width:100%!important;height:100%!important;min-width:0!important;min-height:0!important;max-width:none!important;max-height:none!important;margin:0;box-shadow:0 16px 55px #0004}
+body.music-study-active #musicresize,body.music-study-active #music #expandmusic,body.music-study-active #music #minimize{display:none!important}
+#musicStudyHint{font-size:11px;color:#b4cabb;margin-top:7px}
+body.airplane-study-active #music{display:none!important}
+#dlg{z-index:2147483000!important}
+#musiccinema #cinemaStudyHUD{display:none}
+body.music-study-active #musiccinema[open]{grid-template-rows:auto minmax(0,1fr) 116px}
+body.music-study-active #musiccinema header{flex-wrap:wrap;gap:10px 16px}
+body.music-study-active #musiccinema #cinemaStudyHUD{display:flex;flex:1 0 100%;gap:12px;align-items:center;flex-wrap:wrap;padding-top:5px;border-top:1px solid #ffffff20}
+#cinemaStudyClock{font-size:20px;font-weight:650;font-variant-numeric:tabular-nums}#cinemaStudySubject{font-size:12px;color:#d2dfd6;flex:1;min-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:650px){#musicStudy{padding:10px;gap:10px}#musicStudyHeader{gap:8px 12px}#musicStudyHeader h2{font-size:16px}#musicStudyClock{font-size:23px}.study-actions{gap:5px}body.music-study-active #musiccinema[open]{grid-template-rows:auto minmax(0,1fr) 160px}#studyModePicker .mode-options{grid-template-columns:1fr}#studyModePicker .mode-options button{padding:12px}#musiccinema #cinemaStudyHUD .study-actions button{padding:6px 8px;font-size:11px}}
+@media(max-height:440px){#musicStudy{padding:8px;gap:5px}#musicStudyHeader h2{font-size:14px}#musicStudyHint{display:none}#musicStudyClock{font-size:20px}}
+</style>
+<dialog id="studyModePicker" aria-labelledby="studyModeTitle">
+<h2 id="studyModeTitle">Alege sesiunea de învățare</h2><p id="studyModeSummary"></p>
+<div class="mode-options"><button id="chooseAirSession" type="button"><span class="mode-icon" aria-hidden="true">✈</span><strong>Avion</strong><span>Sesiunea cu avionul, animație și cronometru.</span></button><button id="chooseMusicSession" type="button"><span class="mode-icon" aria-hidden="true">♫</span><strong>Muzică</strong><span>Căutare, copertă mare și versuri, cu timpul de studiu înregistrat.</span></button></div>
+<p class="mode-note">Ambele salvează timpul la materia aleasă. Pauza sesiunii oprește doar cronometrul, nu muzica. Conectează Spotify înainte de sesiune: autentificarea reîncarcă pagina.</p><button id="cancelStudyMode" type="button">Anulează</button>
+</dialog>
+<section id="musicStudy" hidden aria-label="Sesiune de învățare cu muzică">
+<header id="musicStudyHeader"><div><h2>Sesiune de învățare · Muzică</h2><div id="musicStudySubject"></div><div id="musicStudyHint">Caută o melodie. Apasă pe copertă pentru vizualizarea mare și versuri.</div></div><div id="musicStudyClock">00:00:00</div><div class="study-actions"><button id="musicStudyPause" type="button">Pauză sesiune</button><button id="musicStudySave" class="study-save" type="button">Încheie și salvează</button><button id="musicStudyExit" type="button">Ieși fără salvare</button></div></header>
+<div id="musicStudyMain"></div>
+</section>
+<script>
+(()=>{
+const E=id=>document.getElementById(id),panel=E('music'),overlay=E('musicStudy');let marker=null,previousStyle='',wasMini=false,previousFocus=null;
+const hud=document.createElement('div');hud.id='cinemaStudyHUD';hud.innerHTML='<span id="cinemaStudyClock">00:00:00</span><span id="cinemaStudySubject"></span><div class="study-actions"><button id="cinemaStudyPause" type="button">Pauză sesiune</button><button id="cinemaStudySave" class="study-save" type="button">Încheie și salvează</button><button id="cinemaStudyExit" type="button">Ieși fără salvare</button></div>';E('musiccinema').querySelector('header').append(hud);
+const time=ms=>{const s=Math.floor(ms/1000);return [Math.floor(s/3600),Math.floor(s/60)%60,s%60].map(n=>String(n).padStart(2,'0')).join(':')};
+function closeCinema(){if(E('musiccinema').open)E('musiccinema').close()}
+window.addEventListener('study-music-begin',e=>{if(marker)return;previousFocus=document.activeElement;marker=document.createComment('music-panel-home');panel.before(marker);previousStyle=panel.getAttribute('style')||'';wasMini=panel.classList.contains('music-mini');panel.classList.remove('music-mini');E('minimize').textContent='−';document.body.classList.add('music-study-active');overlay.hidden=false;E('musicStudyMain').append(panel);E('musicStudySubject').textContent=e.detail.subject+' · obiectiv '+e.detail.goal+' min';E('cinemaStudySubject').textContent=e.detail.subject;E('musicStudyClock').textContent='00:00:00';E('musicStudyPause').focus()});
+window.addEventListener('study-music-tick',e=>{for(const id of ['musicStudyClock','cinemaStudyClock'])E(id).textContent=time(e.detail.elapsed);for(const id of ['musicStudyPause','cinemaStudyPause']){E(id).textContent=e.detail.paused?'Continuă sesiunea':'Pauză sesiune';E(id).setAttribute('aria-pressed',String(e.detail.paused))}});
+window.addEventListener('study-music-end',()=>{closeCinema();if(marker){marker.replaceWith(panel);marker=null}panel.setAttribute('style',previousStyle);panel.classList.toggle('music-mini',wasMini);E('minimize').textContent=wasMini?'+':'−';document.body.classList.remove('music-study-active');overlay.hidden=true;if(previousFocus&&previousFocus.isConnected)previousFocus.focus()});
+for(const id of ['musicStudyPause','cinemaStudyPause'])E(id).onclick=()=>E('ssPause').click();
+for(const id of ['musicStudySave','cinemaStudySave'])E(id).onclick=()=>{closeCinema();E('ssEnd').click()};
+for(const id of ['musicStudyExit','cinemaStudyExit'])E(id).onclick=()=>{closeCinema();E('ssX').click()};
 })();
 </script>
 </body></html>
