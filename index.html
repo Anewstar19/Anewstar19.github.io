@@ -1018,4 +1018,60 @@ for(const id of ['musicStudySave','cinemaStudySave'])E(id).onclick=()=>{closeCin
 for(const id of ['musicStudyExit','cinemaStudyExit'])E(id).onclick=()=>{closeCinema();E('ssX').click()};
 })();
 </script>
+
+<style id="study-focus-layout">
+#musicStudy{grid-template-rows:auto minmax(0,1fr) 88px;padding:16px 20px;gap:12px}
+#musicStudyHeader{max-width:1500px;flex-wrap:nowrap;gap:12px}
+#musicStudyHeader h2{font-size:16px}#musicStudyHeader #musicStudyHint{display:none}
+#musicStudyMain{max-width:1500px;display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:22px;min-height:0}
+#musicStudy.music-search-closed #musicStudyMain{grid-template-columns:minmax(0,1fr)}
+#studyFocusHero{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;min-height:0;text-align:center;gap:20px;overflow:auto;padding:20px 0}
+#studyFocusLabel{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:#a6c4b0}
+#musicStudy #musicStudyClock{display:block;max-width:100%;font-size:clamp(44px,8.6vw,145px);font-weight:600;line-height:1.05;letter-spacing:-.055em;font-variant-numeric:tabular-nums;color:#e1f2e6;text-shadow:0 5px 50px #9acfac22;white-space:nowrap}
+#studyFocusGoal{font-size:13px;color:#aac5b3;line-height:1.5}
+#studyFocusHero .study-actions{justify-content:center;gap:10px;padding:0 12px}
+#musicStudy #studyFocusHero .study-actions button{padding:11px 15px;font-size:12px;border-radius:20px}
+#studySearchToggle{padding:9px 14px;border:1px solid #ffffff30;border-radius:20px;background:#ffffff0a;color:#e1f2e6;cursor:pointer;font:12px system-ui;white-space:nowrap}
+#studyFocusAside{min-width:0;min-height:0}
+#musicStudy.music-search-closed #studyFocusAside{display:none}
+body.music-study-active #studyFocusAside #music{padding:12px;grid-template-rows:24px minmax(0,1fr);gap:8px;background:#142219d9;box-shadow:0 10px 40px #0002}
+body.music-study-active #music #bodymusic{grid-template-rows:auto minmax(0,1fr) auto auto}
+body.music-study-active #music #musicdock,body.music-study-active #music #seek{display:none!important}
+#studyFocusFooter{max-width:1500px;width:100%;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:12px minmax(0,1fr);gap:8px 18px;padding:10px 16px;background:#0a120de6;border:1px solid #ffffff16;border-radius:15px;min-width:0;overflow:hidden}
+#studyFocusSeek{grid-column:1 / -1;width:100%;min-width:0;height:12px;margin:0;accent-color:#b4ddbf;cursor:pointer}
+#studyFocusSong{display:flex;align-items:center;gap:10px;min-width:0;color:inherit;background:none;border:0;padding:0;text-align:left;cursor:pointer;font:inherit}
+#studyFocusThumb{width:38px;height:38px;object-fit:contain;border-radius:5px;flex-shrink:0}#studyFocusSong>span{min-width:0}
+#studyFocusTitle{display:block;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+#studyFocusArtist{display:block;font-size:11px;color:#a6bfb0;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#studyFocusTransport{display:flex;align-items:center;gap:10px}
+#studyFocusTransport button{display:grid;place-items:center;width:30px;height:30px;border:0;padding:0;background:transparent;color:#e1f2e6;font-size:20px;cursor:pointer;border-radius:50%;line-height:1}
+#studyFocusTransport #studyFocusPlay{width:36px;height:36px;background:#b4ddbf;color:#14281b;font-size:18px}
+#musicStudy [hidden]{display:none!important}
+@media(max-width:900px){#musicStudyMain{grid-template-columns:minmax(0,1fr)}#studyFocusAside{position:absolute;right:20px;top:88px;bottom:120px;width:min(350px,calc(100vw - 40px));z-index:2;border-radius:18px;box-shadow:0 16px 80px #0007}body.music-study-active #studyFocusAside #music{background:#142219}#musicStudy #musicStudyClock{font-size:clamp(44px,11vw,110px)}}
+@media(max-width:650px){#musicStudy{padding:10px;gap:8px;grid-template-rows:auto minmax(0,1fr) 84px}#musicStudyHeader h2{font-size:13px}#musicStudySubject{font-size:11px}#studySearchToggle{font-size:11px;padding:8px 10px}#studyFocusAside{right:10px;top:80px;bottom:110px;width:min(350px,calc(100vw - 20px))}#studyFocusHero{gap:16px}#musicStudy #studyFocusHero .study-actions button{padding:9px 11px;font-size:11px}#studyFocusFooter{padding:8px 10px;gap:6px 8px}#studyFocusTransport{gap:5px}#studyFocusLabel{font-size:11px}#studyFocusGoal{font-size:12px}}
+@media(max-height:450px){#musicStudy{padding:6px 10px;gap:5px;grid-template-rows:auto minmax(0,1fr) 72px}#studyFocusHero{gap:7px;padding:4px 0}#studyFocusLabel,#studyFocusGoal{display:none}#musicStudy #musicStudyClock{font-size:clamp(42px,10vh,80px)}#studyFocusAside{top:60px;bottom:90px}#musicStudy #studyFocusHero .study-actions button{padding:7px 11px}#studyFocusFooter{padding:5px 10px;gap:3px 8px}}
+</style>
+<script>
+(()=>{
+const E=id=>document.getElementById(id),overlay=E('musicStudy'),main=E('musicStudyMain');
+const hero=document.createElement('div');hero.id='studyFocusHero';hero.innerHTML='<div id="studyFocusLabel">Timp pentru învățare</div><div id="studyFocusGoal"></div>';
+hero.insertBefore(E('musicStudyClock'),hero.lastElementChild);hero.append(E('musicStudyHeader').querySelector('.study-actions'));main.prepend(hero);
+const aside=document.createElement('aside');aside.id='studyFocusAside';aside.setAttribute('aria-label','Caută muzică pentru sesiune');main.append(aside);
+const toggle=document.createElement('button');toggle.id='studySearchToggle';toggle.type='button';toggle.setAttribute('aria-controls','studyFocusAside');E('musicStudyHeader').append(toggle);
+function searchOpen(open){overlay.classList.toggle('music-search-closed',!open);toggle.textContent=open?'Ascunde căutarea':'Caută muzică';toggle.setAttribute('aria-expanded',String(open))}
+toggle.onclick=()=>searchOpen(overlay.classList.contains('music-search-closed'));
+const footer=document.createElement('div');footer.id='studyFocusFooter';footer.innerHTML='<input id="studyFocusSeek" type="range" min="0" max="100" step="0.1" value="0" aria-label="Poziția în melodie"><button id="studyFocusSong" type="button" aria-label="Deschide melodia curentă"><img id="studyFocusThumb" alt="" hidden><span><span id="studyFocusTitle">Alege muzica pentru sesiune</span><span id="studyFocusArtist">Folosește căutarea din dreapta</span></span></button><div id="studyFocusTransport"><button id="studyFocusPrevious" type="button" aria-label="Melodia precedentă">⏮</button><button id="studyFocusPlay" type="button" aria-label="Redare">▶</button><button id="studyFocusNext" type="button" aria-label="Melodia următoare">⏭</button></div>';overlay.append(footer);
+let playback=null;
+window.addEventListener('study-music-begin',e=>{aside.append(E('music'));if(!E('trackview').hidden)E('trackback').click();searchOpen(true);E('studyFocusGoal').textContent=e.detail.subject+' · obiectiv '+e.detail.goal+' min';if(!E('authenticated').hidden)E('querymusic').focus()});
+window.addEventListener('study-music-end',()=>searchOpen(true));
+window.addEventListener('study-music-tick',e=>{E('studyFocusLabel').textContent=e.detail.paused?'Sesiune pe pauză':'Timp pentru învățare';const mins=Math.max(0,e.detail.goal-Math.floor(e.detail.elapsed/60000));E('studyFocusGoal').textContent=e.detail.subject+' · '+(mins>0?'mai sunt '+mins+' min din obiectiv':'Obiectiv atins — poți continua sau salva')});
+window.addEventListener('jurnal-track-selected',()=>{if(document.body.classList.contains('music-study-active')&&!E('trackview').hidden)E('trackback').click()});
+window.addEventListener('jurnal-track-state',e=>{playback=e.detail;const t=playback.track;E('studyFocusTitle').textContent=t.name||'Melodie';E('studyFocusArtist').textContent=(t.artists||[]).map(a=>a.name).join(', ');const img=t.album&&t.album.images&&t.album.images[0];E('studyFocusThumb').hidden=!img;if(img)E('studyFocusThumb').src=img.url;E('studyFocusPlay').textContent=playback.paused?'▶':'Ⅱ';E('studyFocusPlay').setAttribute('aria-label',playback.paused?'Redare':'Pauză');if(document.activeElement!==E('studyFocusSeek'))E('studyFocusSeek').value=playback.duration?playback.position*100/playback.duration:0});
+E('studyFocusPlay').onclick=()=>E(playback&&!playback.paused?'pausemusic':'playmusic').click();E('studyFocusPrevious').onclick=()=>E('previousmusic').click();E('studyFocusNext').onclick=()=>E('nextmusic').click();
+E('studyFocusSeek').onchange=()=>{E('seek').value=E('studyFocusSeek').value;E('seek').dispatchEvent(new Event('change',{bubbles:true}))};
+function openCinema(){const image=E('trackbigart');if(image&&!image.hidden&&image.getAttribute('src'))image.click();else searchOpen(true)}
+E('studyFocusSong').onclick=openCinema;
+for(const id of ['coverdirect','tracklink'])E(id).addEventListener('click',e=>{if(!document.body.classList.contains('music-study-active'))return;e.preventDefault();e.stopImmediatePropagation();openCinema()},true);
+})();
+</script>
 </body></html>
