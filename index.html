@@ -1019,21 +1019,23 @@ for(const id of ['musicStudyExit','cinemaStudyExit'])E(id).onclick=()=>{closeCin
 })();
 </script>
 
-<style id="song-study-layout">
-#musicStudy{--study-song-art:none;background:#101010;grid-template-rows:auto minmax(0,1fr) 90px;padding:18px 24px;gap:12px;isolation:isolate}
-#musicStudy::before{content:'';position:absolute;inset:0;z-index:-2;background-image:var(--study-song-art);background-position:center;background-repeat:no-repeat;background-size:cover;pointer-events:none}
-#musicStudy::after{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(#0008,#0006 40%,#000b);pointer-events:none}
-#musicStudyHeader{max-width:none;gap:12px;flex-wrap:nowrap}#musicStudyHeader h2{font-size:14px;color:white}#musicStudySubject{color:#ddd;font-size:12px}#musicStudyHint{display:none}
+<style id="song-study-fit-layout">
+#musicStudy{--study-song-art:none;background:#101010;grid-template-rows:auto minmax(0,1fr) 88px;padding:18px 24px;gap:12px;isolation:isolate}
+#musicStudy::before{content:'';position:absolute;inset:-45px;z-index:-3;background-image:var(--study-song-art);background-size:cover;background-position:center;filter:blur(40px) brightness(.3);pointer-events:none}
+#songFitStage{position:absolute;inset:72px 18px 120px;z-index:-2;display:flex;align-items:center;justify-content:center;overflow:hidden;pointer-events:none}
+#songFitImage{display:block;width:auto;height:auto;max-width:min(100%,800px);max-height:100%;object-fit:contain;border-radius:12px;box-shadow:0 12px 50px #0005}
+#musicStudy::after{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(#0005,#0002 45%,#0008);pointer-events:none}
+#musicStudyHeader{max-width:none;gap:12px;flex-wrap:nowrap}#musicStudyHeader h2{font-size:14px;color:#fff}#musicStudySubject{color:#ddd;font-size:12px}#musicStudyHint{display:none}
 #songStudyTools{display:flex;gap:8px;align-items:center}
 #songStudyTools button{padding:8px 13px;border:1px solid #ffffff35;border-radius:20px;background:#0005;color:#fff;font:12px system-ui;cursor:pointer;white-space:nowrap}
 #musicStudyMain{max-width:none;display:grid;grid-template-columns:minmax(0,1fr);position:relative;min-height:0}
 #songStudyHero{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:20px;min-width:0;min-height:0;text-align:center;overflow:auto;padding:18px 0}
-#songStudyLabel{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:#fffd;text-shadow:0 2px 10px #0008}
-#musicStudy #musicStudyClock{font-size:clamp(44px,11vw,160px);font-weight:600;letter-spacing:-.05em;line-height:1.05;font-variant-numeric:tabular-nums;white-space:nowrap;color:white;text-shadow:0 4px 35px #0008;max-width:100%}
+#songStudyLabel{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:#fffd;text-shadow:0 2px 10px #000}
+#musicStudy #musicStudyClock{font-size:clamp(44px,11vw,160px);font-weight:600;letter-spacing:-.05em;line-height:1.05;font-variant-numeric:tabular-nums;white-space:nowrap;color:#fff;text-shadow:0 3px 20px #000b;max-width:100%}
 #songStudyCaption{font-size:16px;color:#fff;text-shadow:0 2px 8px #000;max-width:90%;overflow-wrap:anywhere}
-#songStudyGoal{font-size:12px;color:#fffd;text-shadow:0 2px 8px #0008}
+#songStudyGoal{font-size:12px;color:#fffd;text-shadow:0 2px 8px #000}
 #songStudyHero .study-actions{justify-content:center;gap:10px;padding:0 10px}
-#musicStudy #songStudyHero .study-actions button{padding:11px 16px;border:1px solid #ffffff50;border-radius:24px;background:#0005;color:white;backdrop-filter:blur(10px)}
+#musicStudy #songStudyHero .study-actions button{padding:11px 16px;border:1px solid #ffffff50;border-radius:24px;background:#0007;color:#fff;backdrop-filter:blur(8px)}
 #musicStudy #songStudyHero .study-actions .study-save{background:#fff;color:#141414;border-color:#fff}
 #songStudySearch{position:absolute;right:0;top:0;bottom:0;width:min(370px,100%);z-index:4;min-height:0;box-shadow:0 15px 65px #0008;border-radius:18px}
 #musicStudy.song-search-hidden #songStudySearch{display:none}
@@ -1041,34 +1043,35 @@ body.music-study-active #songStudySearch #music{position:relative!important;inse
 body.music-study-active #music #bodymusic{grid-template-rows:auto minmax(0,1fr) auto auto}
 body.music-study-active #music #musicdock,body.music-study-active #music #seek{display:none!important}
 body.music-study-active #music .music-heading{color:#ddd}body.music-study-active #music #querymusic{background:#ffffff0d;color:#fff}body.music-study-active #music #searchtype{background:#262626}body.music-study-active #music #searchbutton,body.music-study-active #music #resultlist button{background:#fff;color:#111}
-#songStudyFooter{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:12px minmax(0,1fr);gap:8px 18px;min-width:0;width:100%;padding:10px 16px;background:#080808d9;border:1px solid #ffffff20;border-radius:15px;backdrop-filter:blur(14px);overflow:hidden}
+#songStudyFooter{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:12px minmax(0,1fr);gap:8px 18px;min-width:0;width:100%;padding:10px 16px;background:#080808df;border:1px solid #ffffff20;border-radius:15px;overflow:hidden}
 #songStudySeek{grid-column:1 / -1;width:100%;height:12px;min-width:0;margin:0;accent-color:#fff;cursor:pointer}
-#songStudyTrack{display:flex;align-items:center;gap:10px;min-width:0;background:none;border:0;padding:0;text-align:left;color:white;cursor:pointer;font:inherit}
+#songStudyTrack{display:flex;align-items:center;gap:10px;min-width:0;background:none;border:0;padding:0;text-align:left;color:#fff;cursor:pointer;font:inherit}
 #songStudyThumb{width:38px;height:38px;object-fit:contain;border-radius:5px;flex-shrink:0}#songStudyTrack>span{min-width:0}
 #songStudyTitle{display:block;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#songStudyArtist{display:block;font-size:11px;color:#ccc;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#songStudyTransport{display:flex;align-items:center;gap:10px}#songStudyTransport button{display:grid;place-items:center;width:29px;height:29px;border:0;border-radius:50%;background:transparent;color:white;padding:0;font-size:20px;cursor:pointer;line-height:1}#songStudyTransport #songStudyPlay{width:36px;height:36px;background:white;color:#111;font-size:18px}
+#songStudyTransport{display:flex;align-items:center;gap:10px}#songStudyTransport button{display:grid;place-items:center;width:29px;height:29px;border:0;border-radius:50%;background:transparent;color:#fff;padding:0;font-size:20px;cursor:pointer;line-height:1}#songStudyTransport #songStudyPlay{width:36px;height:36px;background:#fff;color:#111;font-size:18px}
 #musicStudy [hidden]{display:none!important}
-#songStudyHero button:focus-visible,#songStudyTools button:focus-visible,#songStudyFooter button:focus-visible{outline:2px solid white;outline-offset:3px}
-@media(max-width:650px){#musicStudy{padding:10px;gap:8px;grid-template-rows:auto minmax(0,1fr) 84px}#musicStudyHeader h2{font-size:12px}#musicStudySubject{font-size:10px}#songStudyTools{gap:5px}#songStudyTools button{font-size:11px;padding:7px 9px}#songStudyHero{gap:16px}#musicStudy #songStudyHero .study-actions button{padding:9px 11px;font-size:11px}#songStudyCaption{font-size:13px}#songStudyFooter{padding:8px 10px;gap:6px 8px}#songStudyTransport{gap:5px}}
-@media(max-height:450px){#musicStudy{padding:6px 10px;gap:5px;grid-template-rows:auto minmax(0,1fr) 72px}#songStudyHero{gap:7px;padding:4px 0}#songStudyLabel,#songStudyGoal{display:none}#musicStudy #musicStudyClock{font-size:clamp(40px,17vh,75px)}#musicStudy #songStudyHero .study-actions button{padding:7px 10px;font-size:11px}#songStudyFooter{padding:5px 10px;gap:3px 8px}}
+#songStudyHero button:focus-visible,#songStudyTools button:focus-visible,#songStudyFooter button:focus-visible{outline:2px solid #fff;outline-offset:3px}
+@media(max-width:650px){#musicStudy{padding:10px;gap:8px;grid-template-rows:auto minmax(0,1fr) 84px}#musicStudyHeader h2{font-size:12px}#musicStudySubject{font-size:10px}#songStudyTools{gap:5px}#songStudyTools button{font-size:11px;padding:7px 9px}#songStudyHero{gap:16px}#musicStudy #songStudyHero .study-actions button{padding:9px 11px;font-size:11px}#songStudyCaption{font-size:13px}#songStudyFooter{padding:8px 10px;gap:6px 8px}#songStudyTransport{gap:5px}#songFitStage{inset:78px 10px 108px}}
+@media(max-height:450px){#musicStudy{padding:6px 10px;gap:5px;grid-template-rows:auto minmax(0,1fr) 72px}#songStudyHero{gap:7px;padding:4px 0}#songStudyLabel,#songStudyGoal{display:none}#musicStudy #musicStudyClock{font-size:clamp(40px,17vh,75px)}#musicStudy #songStudyHero .study-actions button{padding:7px 10px;font-size:11px}#songStudyFooter{padding:5px 10px;gap:3px 8px}#songFitStage{inset:58px 10px 88px}}
 </style>
 <script>
 (()=>{
 const E=id=>document.getElementById(id),overlay=E('musicStudy'),main=E('musicStudyMain');let playback=null;
-const hero=document.createElement('div');hero.id='songStudyHero';hero.innerHTML='<div id="songStudyLabel">Timp pentru învățare</div><div id="songStudyCaption">Alege o melodie pentru sesiune</div><div id="songStudyGoal"></div>';
-hero.insertBefore(E('musicStudyClock'),E('songStudyCaption'));hero.append(E('musicStudyHeader').querySelector('.study-actions'));main.prepend(hero);
+const pictureStage=document.createElement('div');pictureStage.id='songFitStage';pictureStage.setAttribute('aria-hidden','true');const picture=document.createElement('img');picture.id='songFitImage';picture.alt='';picture.hidden=true;pictureStage.append(picture);overlay.prepend(pictureStage);
+const hero=document.createElement('div');hero.id='songStudyHero';hero.innerHTML='<div id="songStudyLabel">Timp pentru învățare</div><div id="songStudyCaption">Alege o melodie pentru sesiune</div><div id="songStudyGoal"></div>';hero.insertBefore(E('musicStudyClock'),E('songStudyCaption'));hero.append(E('musicStudyHeader').querySelector('.study-actions'));main.prepend(hero);
 const search=document.createElement('aside');search.id='songStudySearch';search.setAttribute('aria-label','Caută muzică');main.append(search);
 const tools=document.createElement('div');tools.id='songStudyTools';tools.innerHTML='<button id="songStudySearchToggle" type="button" aria-controls="songStudySearch">Caută muzică</button><button id="songStudyLyrics" type="button">Versuri</button>';E('musicStudyHeader').append(tools);
 const footer=document.createElement('div');footer.id='songStudyFooter';footer.innerHTML='<input id="songStudySeek" type="range" min="0" max="100" step="0.1" value="0" aria-label="Poziția în melodie"><button id="songStudyTrack" type="button" aria-label="Deschide coperta melodiei"><img id="songStudyThumb" alt="" hidden><span><span id="songStudyTitle">Alege o melodie</span><span id="songStudyArtist">Căutarea este disponibilă sus</span></span></button><div id="songStudyTransport"><button id="songStudyPrevious" type="button" aria-label="Melodia precedentă">⏮</button><button id="songStudyPlay" type="button" aria-label="Redare">▶</button><button id="songStudyNext" type="button" aria-label="Melodia următoare">⏭</button></div>';overlay.append(footer);
 function searchOpen(open){overlay.classList.toggle('song-search-hidden',!open);E('songStudySearchToggle').textContent=open?'Ascunde căutarea':'Caută muzică';E('songStudySearchToggle').setAttribute('aria-expanded',String(open))}
-function renderTrack(track){if(!track)return;const artist=(track.artists||[]).map(a=>a.name).join(', ');E('songStudyTitle').textContent=track.name||'Melodie';E('songStudyArtist').textContent=artist;E('songStudyCaption').textContent=(track.name||'Melodie')+(artist?' · '+artist:'');const images=(track.album&&track.album.images)||track.images||[];const image=images.reduce((a,b)=>!a||(b.width||0)>(a.width||0)?b:a,null);E('songStudyThumb').hidden=!image;if(image&&image.url){E('songStudyThumb').src=image.url;overlay.style.setProperty('--study-song-art','url('+JSON.stringify(image.url)+')')}else overlay.style.removeProperty('--study-song-art')}
+function renderTrack(track){if(!track)return;const artist=(track.artists||[]).map(a=>a.name).join(', ');E('songStudyTitle').textContent=track.name||'Melodie';E('songStudyArtist').textContent=artist;E('songStudyCaption').textContent=(track.name||'Melodie')+(artist?' · '+artist:'');const images=(track.album&&track.album.images)||track.images||[];const image=images.reduce((a,b)=>!a||(b.width||0)>(a.width||0)?b:a,null);E('songStudyThumb').hidden=!image;if(image&&image.url){E('songStudyThumb').src=image.url;if(picture.getAttribute('src')!==image.url)picture.src=image.url;picture.hidden=false;overlay.style.setProperty('--study-song-art','url('+JSON.stringify(image.url)+')')}else{picture.hidden=true;picture.removeAttribute('src');overlay.style.removeProperty('--study-song-art')}}
+picture.onerror=()=>{picture.hidden=true};
 E('songStudySearchToggle').onclick=()=>searchOpen(overlay.classList.contains('song-search-hidden'));
 window.addEventListener('study-music-begin',e=>{search.append(E('music'));if(!E('trackview').hidden)E('trackback').click();if(playback){renderTrack(playback.track);searchOpen(false)}else searchOpen(true);E('songStudyGoal').textContent=e.detail.subject+' · obiectiv '+e.detail.goal+' min';if(!overlay.classList.contains('song-search-hidden')&&!E('authenticated').hidden)E('querymusic').focus()});
 window.addEventListener('study-music-tick',e=>{E('songStudyLabel').textContent=e.detail.paused?'Sesiune pe pauză':'Timp pentru învățare';const left=Math.max(0,e.detail.goal-Math.floor(e.detail.elapsed/60000));E('songStudyGoal').textContent=e.detail.subject+' · '+(left?'mai sunt '+left+' min din obiectiv':'Obiectiv atins — poți continua sau salva')});
 window.addEventListener('jurnal-track-selected',e=>{if(!document.body.classList.contains('music-study-active'))return;renderTrack(e.detail);if(!E('trackview').hidden)E('trackback').click();searchOpen(false);E('musicStudyPause').focus()});
 window.addEventListener('jurnal-track-state',e=>{playback=e.detail;renderTrack(playback.track);E('songStudyPlay').textContent=playback.paused?'▶':'Ⅱ';E('songStudyPlay').setAttribute('aria-label',playback.paused?'Redare':'Pauză');if(document.activeElement!==E('songStudySeek'))E('songStudySeek').value=playback.duration?playback.position*100/playback.duration:0});
 E('songStudyPrevious').onclick=()=>E('previousmusic').click();E('songStudyNext').onclick=()=>E('nextmusic').click();E('songStudyPlay').onclick=()=>E(playback&&!playback.paused?'pausemusic':'playmusic').click();E('songStudySeek').onchange=()=>{E('seek').value=E('songStudySeek').value;E('seek').dispatchEvent(new Event('change',{bubbles:true}))};
-function openCinema(lyrics){const image=E('trackbigart');if(!image||image.hidden||!image.getAttribute('src')){searchOpen(true);return}image.click();const lyricButton=E('cinemalyricsbutton'),pane=E('cinemalyrics');if(lyrics&&pane.hidden||!lyrics&&!pane.hidden)lyricButton.click()}
+function openCinema(lyrics){const image=E('trackbigart');if(!image||image.hidden||!image.getAttribute('src')){searchOpen(true);return}image.click();const lyricButton=E('cinemalyricsbutton'),pane=E('cinemalyrics');if((lyrics&&pane.hidden)||(!lyrics&&!pane.hidden))lyricButton.click()}
 E('songStudyTrack').onclick=()=>openCinema(false);E('songStudyLyrics').onclick=()=>openCinema(true);
 for(const id of ['coverdirect','tracklink'])E(id).addEventListener('click',e=>{if(!document.body.classList.contains('music-study-active'))return;e.preventDefault();e.stopImmediatePropagation();openCinema(false)},true);
 })();
